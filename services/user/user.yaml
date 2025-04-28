@@ -1,0 +1,199 @@
+### Metadata ###
+openapi: '3.0.0'
+info:
+  title: 'Flow API User Service'
+  description: 'An API for tracking public transit routes and crowdsourcing reports'
+  version: '1.0.0'
+
+### Server ###
+servers:
+  - url: 'https://www.example.com'
+
+### Endpoints ###
+paths:
+  # admin-only
+  /users:
+    get:
+      description: Returns a list of user accounts
+
+      responses:
+        '200':
+          description: Successfully retrieved user accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
+    delete:
+      description: Deletes all user accounts
+      
+      responses:
+        '200':
+          description: Successfully deleted user accounts
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
+  # endpoint for registering a new account
+  /user/register:
+    post:
+      description: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Account'
+      
+      responses:
+        '200':
+          description: Successfully created user account
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
+  # endpoint for logging in
+  /user/login:
+    post:
+      description: Login to an existing user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountCredentials'
+      
+      responses:
+        '200':
+          description: Successfully logged in user
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+  
+  # endpoint for individual users to retrieve and modify their account information
+  /user/{id}:
+    parameters:
+      - name: id
+        description: The unique identifier of a user account
+        in: path
+        required: true
+        schema:
+          type: string
+    
+    get:
+      description: Get a user account by id
+
+      responses:
+        '200':
+          description: Successfully retrieved user account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
+    patch:
+      description: Update a user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                AccountCredentials:
+                  $ref: '#/components/schemas/AccountCredentials'
+      
+      responses:
+        '200':
+          description: Successfully updated user account
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+    
+    delete:
+      description: Delete a user
+
+      responses:
+        '200':
+          description: Successfully deleted user account
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
+### Components ###
+components:
+
+  ### Schemas ###
+  schemas:
+    AccountCredentials:
+      description: User account credentials
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    
+    AccountType:
+      description: The type of a user account
+      type: string
+      enum:
+        - admin
+        - user
+
+    Account:
+      description: A Flow user account
+      type: object
+      required:
+        - id
+        - AccountCredentials
+        - AccountType
+      properties:
+        id:
+          type: string
+        AccountCredentials:
+          $ref: '#/components/schemas/AccountCredentials'
+        AccountType:
+          $ref: '#/components/schemas/AccountType'
+
+  ### Responses ###
+  responses:
+    400Error:
+      description: Invalid client request.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                description: A human-readable error message
+                type: string
+
+    500Error:
+      description: The server encountered an error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                description: A human-readable error message
+                type: string
