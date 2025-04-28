@@ -1,0 +1,161 @@
+### Metadata ###
+openapi: '3.0.0'
+info:
+  title: 'Flow API Route Service'
+  description: 'An API for tracking public transit routes and crowdsourcing reports'
+  version: '1.0.0'
+
+### Server ###
+servers:
+  - url: placeholder
+
+### Endpoints ###
+paths:
+  /routes:
+    get:
+      description: Get all routes
+      parameters:
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageNumber'
+      responses:
+        '200':
+          description:
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  - $ref: '#/components/schemas/Route'
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
+    post:
+      description: Create a new route
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '$/components/schemas/Route'
+      responses:
+        '200':
+          description:
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+    
+    delete:
+      description: Delete all routes
+      responses:
+        '200':
+          description:
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
+  /route/{id}:
+    parameters:
+      - name: id
+      description: The unique identifier of a route
+      in: path
+      required: true
+      schema:
+        type: string
+
+    get:
+      description: Get a route
+      responses:
+        '200':
+          description:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
+    patch:
+      description: Update a route
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                # properties of Route object
+      responses:
+        '200':
+          description:
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+    
+    delete:
+      description: Delete a route
+      responses:
+        '200':
+          description:
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
+### Components ###
+components:
+  ### Parameters ###
+  parameters:
+    PageLimit:
+      name: limit
+      in: query
+      required: false
+      description: Limits the number of items on a page.
+      schema:
+        type: integer
+    
+    PageNumber:
+      name: page
+      in: query
+      required: false
+      description: The page number to be displayed.
+      schema:
+        type: integer
+  
+  ### Responses ###
+  responses:
+    400Error:
+      description: Invalid client request.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                description: A human-readable error message.
+                type: string
+
+    500Error:
+      description: The server encountered an error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                description: A human-readable error message.
+                type: string
+
+  ### Schemas ###
+  schemas:
+    Route:
+      description:
+      type: object
+      properties:
+        # properties

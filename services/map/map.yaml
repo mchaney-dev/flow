@@ -1,0 +1,32 @@
+### Metadata ###
+openapi: '3.0.0'
+info:
+  title: 'Flow API Map Service'
+  description: 'An API for tracking public transit routes and crowdsourcing reports'
+  version: '1.0.0'
+
+### Server ###
+servers:
+  - url: placeholder
+
+### Endpoints ###
+paths:
+  # admin-only
+  /maps:
+    get:
+      description: Get all maps
+    delete:
+      description: Delete all maps
+
+  # admin-only
+  /map/new:
+    post:
+      description: Create a map
+  
+  /map/{id}:
+    get:
+      description: Get a map
+    patch:
+      description: Update a map
+    delete:
+      description: Delete a map
