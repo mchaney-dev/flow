@@ -3,109 +3,105 @@ import json
 
 # initialize firestore client
 db = firestore.Client()
-users = db.collection('users')
+users = db.collection("users")
 
 def request_handler(request):
     try:
-        data = request.get_json()
+        # default to using an empty dict if data is None
+        data = request.get_json(silent=True) or {}
+
+        # split parts of the path up into a list
+        path = request.path.strip("/").split("/")
 
         # route HTTP requests based on endpoint
-        match request.path:
-            # admin endpoint for managing all users
-            case '/users':
+        match path:
+            # /users, admin endpoint for managing all users
+            case ["users"]:
                 match request.method:
                     # get a list of all user accounts
-                    case 'GET':
-                        pass
-
+                    case "GET":
+                        return get_users()
                     # delete all user accounts
-                    case 'DELETE':
-                        pass
-
+                    case "DELETE":
+                        return delete_users()
                     # handle invalid request method
                     case _:
-                        return http_response(
-                            404,
-                            "Invalid request method.",
-                            data
-                        )
+                        return http_response(405, "Invalid request method.")
             
-            # endpoint for registering a new user account
-            case '/user/register':
+            # /user/register, endpoint for registering a new user account
+            case ["user", "register"]:
                 match request.method:
                     # register a new user account
-                    case 'POST':
-                        pass
-
+                    case "POST":
+                        return register_user(data)
                     # handle invalid request method
                     case _:
-                        return http_response(
-                            404,
-                            "Invalid request method.",
-                            data
-                        )
+                        return http_response(405, "Invalid request method.")
             
-            # endpoint for logging in with an existing user account
-            case '/user/login':
+            # /user/login, endpoint for logging in with an existing user account
+            case ["user", "login"]:
                 match request.method:
                     # login a user account
-                    case 'POST':
-                        pass
-
+                    case "POST":
+                        return login_user(data)
                     # handle invalid request method
                     case _:
-                        return http_response(
-                            404,
-                            "Invalid request method.",
-                            data
-                        )
+                        return http_response(404, "Invalid request method.")
                     
-            # endpoint for managing a specific user account
-            case '/user':
-                # TODO: check for user id in path parameters
+            # /user/{id}, endpoint for managing a specific user account
+            case ["user", user_id]:
                 match request.method:
                     # get a user account
-                    case 'GET':
-                        pass
-
+                    case "GET":
+                        return get_user(user_id)
                     # update a user account
-                    case 'PATCH':
-                        pass
-
+                    case "PATCH":
+                        return update_user(user_id)
                     # delete a user account
-                    case 'DELETE':
-                        pass
-
+                    case "DELETE":
+                        return delete_user(user_id)
                     # handle invalid request method
                     case _:
-                        return http_response(
-                            404,
-                            "Invalid request method.",
-                            data
-                        )
+                        return http_response(405, "Invalid request method.")
             # handle invalid endpoint
             case _:
-                return http_response(
-                    400,
-                    "Invalid endpoint.",
-                    data
-                )
+                return http_response(404, "Invalid endpoint.")
     except Exception as e:
-        return http_response(
-            500,
-            str(e),
-            data
-        )
+        return http_response(500, f"Internal server error: {str(e)}")
 
 # utility function to form a consistent HTTP response
-def http_response(status: int, message: str, data: str):
-    response = {
-        "status": status,
-        "headers": {
-            "Content-Type": "application/json"
-        },
-        "message": message,
-        "data": data
-    }
+def http_response(status: int, message: str):
+    # google cloud expects a tuple
+    return (
+        json.dumps({"message": message}), 
+        status, 
+        {"Content-Type": "application/json"}
+        )
 
-    return json.dumps(response)
+# GET /users
+def get_users():
+    pass
+
+# DELETE /users
+def delete_users():
+    pass
+
+# POST /user/register
+def register_user():
+    pass
+
+# POST /user/login
+def login_user():
+    pass
+
+# GET /user/{id}
+def get_user():
+    pass
+
+# PATCH /user/{id}
+def update_user():
+    pass
+
+# DELETE /user/{id}
+def delete_user():
+    pass
