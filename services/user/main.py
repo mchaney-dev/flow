@@ -42,10 +42,10 @@ def request_handler(request):
                 match request.method:
                     # get a list of all user accounts
                     case "GET":
-                        return get_users()
+                        return get_users(query_params)
                     # delete all user accounts
                     case "DELETE":
-                        return delete_users()
+                        return delete_users(query_params)
                     # handle invalid request method
                     case _:
                         logging.error(f"Invalid request method: {request.method}")
@@ -98,29 +98,83 @@ def request_handler(request):
         return http_response(500)
 
 # utility function to form a consistent HTTP response
-def http_response(status: int):
+def http_response(status: int, data=None):
     try:
-        message = STATUS[status]
+        if data is None:
+            data = ""
+        
+        response = {
+            "message": STATUS.get(status, "Unknown status"),
+            "data": data
+        }
+
         # google cloud expects a tuple
         return (
-            json.dumps({"message": message}), 
+            json.dumps(response),
             status, 
             {"Content-Type": "application/json"}
         )
     except Exception as e:
         logging.error(f"Internal server error: {e}")
         return (
-            json.dumps({"message": STATUS[500]}),
+            json.dumps({"message": STATUS[500], "data": ""}),
             500,
             {"Content-Type": "application/json"}
         )
 
 # GET /users
-def get_users():
-    pass
+def get_users(query_params=None):
+    query = users
+    limit = None
+    docs = []
+
+    if query_params:
+        # filter - AccountType
+        if "type" in query_params:
+            query = query.where("AccountType", "==", query_params["type"])
+        
+        # filter - pagination limit
+        if "limit" in query_params:
+            try:
+                limit = int(query_params["limit"])
+                query = query.limit(limit)
+            except Exception as e:
+                logging.error(f"Invalid limit parameter: {query_params["limit"]}")
+                return http_response(400)
+
+        # filter - pagination start_after
+        if "start_after" in query_params:
+            doc_id = query_params["start_after"]
+            try:
+                last_doc = users.document(doc_id).get()
+                if last_doc.exists:
+                    query = query.start_after(last_doc)
+                else:
+                    logging.error(f"Invalid start_after ID: {query_params["start_after"]}")
+                    return http_response(400)
+            except Exception as e:
+                logging.error(f"Internal server error: {e}")
+                return http_response(500)
+    
+    try:
+        docs = list(query.stream())
+        data = [doc.to_dict() for doc in docs]
+
+        # add pagination token if needed
+        next_page_token = docs[-1].id if limit and len(docs) == limit else ""
+
+        response = {
+            "users": data,
+            "nextPageToken": next_page_token
+        }
+
+        return http_response(200, response)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
 
 # DELETE /users
-def delete_users():
+def delete_users(**kwargs):
     pass
 
 # POST /users/register
