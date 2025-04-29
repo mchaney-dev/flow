@@ -158,17 +158,17 @@ def get_users(query_params=None):
     
     try:
         docs = list(query.stream())
-        data = [doc.to_dict() for doc in docs]
+        query_result = [doc.to_dict() for doc in docs]
 
         # add pagination token if needed
         next_page_token = docs[-1].id if limit and len(docs) == limit else ""
 
-        response = {
-            "users": data,
+        data = {
+            "users": query_result,
             "nextPageToken": next_page_token
         }
 
-        return http_response(200, response)
+        return http_response(200, data)
     except Exception as e:
         logging.error(f"Internal server error: {e}")
         return http_response(500)
@@ -200,12 +200,12 @@ def delete_users(query_params=None):
         if len(docs) % 500 != 0:
             batch.commit()
         
-        response = {
+        data = {
             "deletedUserCount": len(deleted_ids),
             "deletedUserIds": deleted_ids
         }
 
-        return http_response(200, response)
+        return http_response(200, data)
     except Exception as e:
         logging.error(f"Internal server error: {e}")
         return http_response(500)
