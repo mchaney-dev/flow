@@ -55,6 +55,14 @@ paths:
 
     delete:
       description: Deletes all user accounts
+      parameters:
+        # filter by account type
+        - name: type
+        in: query
+        description: The type of user account to delete
+        required: false
+        schema:
+          $ref: '#/components/schemas/AccountType'
       
       responses:
         '200':
