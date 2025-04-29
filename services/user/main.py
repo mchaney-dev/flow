@@ -174,8 +174,29 @@ def get_users(query_params=None):
         return http_response(500)
 
 # DELETE /users
-def delete_users(**kwargs):
-    pass
+def delete_users(query_params=None):
+    try:
+        query = users
+
+        if query_params:
+            # filter - AccountType
+            if "type" in query_params:
+                query = query.where("AccountType", "==", query_params["type"])
+        
+        docs =  list(query.stream())
+        deleted_ids = []
+        for doc in docs:
+            doc.reference.delete()
+            deleted_ids.append(doc.id)
+        
+        response = {
+            "deletedUserIds": deleted_ids
+        }
+
+        return http_response(200, response)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
 
 # POST /users/register
 def register_user():
