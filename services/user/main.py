@@ -1,6 +1,7 @@
 from google.cloud import firestore
 import json
 import logging
+import base64
 
 STATUS = {
     200: "OK",
@@ -103,17 +104,18 @@ def http_response(status: int, data=None):
         if data is None:
             data = ""
         
-        response = {
+        response_data = {
             "message": STATUS.get(status, "Unknown status"),
             "data": data
         }
-
         # google cloud expects a tuple
-        return (
-            json.dumps(response),
+        response = (
+            json.dumps(response_data),
             status, 
             {"Content-Type": "application/json"}
         )
+        logging.debug(f"Raw response data: {response}")
+        return response
     except Exception as e:
         logging.error(f"Internal server error: {e}")
         return (
@@ -127,6 +129,7 @@ def get_users(query_params=None):
     query = users
     limit = None
     docs = []
+    next_page_token = ""
 
     if query_params:
         # filter - AccountType
@@ -144,8 +147,12 @@ def get_users(query_params=None):
 
         # filter - pagination start_after
         if "start_after" in query_params:
-            doc_id = query_params["start_after"]
             try:
+                doc_id = query_params["start_after"]
+                # decode base64 nextPageToken
+                doc_id = base64.urlsafe_b64decode(doc_id.encode()).decode()
+                logging.debug(f"Decoded next page token: {doc_id}")
+
                 last_doc = users.document(doc_id).get()
                 if last_doc.exists:
                     query = query.start_after(last_doc)
@@ -160,8 +167,10 @@ def get_users(query_params=None):
         docs = list(query.stream())
         query_result = [doc.to_dict() for doc in docs]
 
-        # add pagination token if needed
-        next_page_token = docs[-1].id if limit and len(docs) == limit else ""
+        # add base64-encoded pagination token if needed
+        if limit and len(docs) == limit:
+            last_doc_id = docs[-1].id
+            next_page_token = base64.urlsafe_b64encode(last_doc_id.encode()).decode()
 
         data = {
             "users": query_result,
