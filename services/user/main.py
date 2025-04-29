@@ -2,6 +2,7 @@ from google.cloud import firestore
 import json
 import logging
 import base64
+import bcrypt
 
 STATUS = {
     200: "OK",
@@ -10,6 +11,7 @@ STATUS = {
     401: "Unauthorized",
     404: "Not Found",
     405: "Method Not Allowed",
+    409: "Conflict",
     500: "Internal Server Error"
 }
 
@@ -220,11 +222,42 @@ def delete_users(query_params=None):
         return http_response(500)
 
 # POST /users/register
-def register_user():
-    pass
+def register_user(data):
+    try:
+        query = users
+
+        if "email" not in data:
+            logging.error(f"Missing 'email' in request body")
+            return http_response(400)
+        if "password" not in data:
+            logging.error(f"Missing 'password' in request body")
+            return http_response(400)
+    
+        email = data["email"].strip().lower()
+        password = bcrypt.hashpw(data["password"].encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+        # check for accounts that already use this email
+        registered_email = query.where("email", "==", email).limit(1).stream()
+        if any(registered_email):
+            logging.error(f"Email already in use")
+            return http_response(409)
+
+        # create new user
+        doc = users.document()
+        user_id = doc.id
+        # id is automatically generated
+        data["id"] = user_id
+        data["email"] = email
+        data["password"] = password
+        doc.set(data)
+
+        return http_response(201)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
 
 # POST /users/login
-def login_user():
+def login_user(data):
     pass
 
 # GET /users/{id}
@@ -232,7 +265,7 @@ def get_user():
     pass
 
 # PATCH /users/{id}
-def update_user():
+def update_user(data):
     pass
 
 # DELETE /users/{id}
