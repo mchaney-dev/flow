@@ -17,12 +17,12 @@ paths:
       description: Get all reports
     delete:
       description: Delete all reports
-
-  /report:
-    get:
-      description: Get a report
+  /reports/new:
     post:
       description: Post a report
+  /reports/{id}:
+    get:
+      description: Get a report
     patch:
       description: Update a report
     delete:

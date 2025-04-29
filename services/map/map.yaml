@@ -19,11 +19,11 @@ paths:
       description: Delete all maps
 
   # admin-only
-  /map/new:
+  /maps/new:
     post:
       description: Create a map
   
-  /map/{id}:
+  /maps/{id}:
     get:
       description: Get a map
     patch:

@@ -28,8 +28,8 @@ def request_handler(request):
                     case _:
                         return http_response(405, "Invalid request method.")
             
-            # /user/register, endpoint for registering a new user account
-            case ["user", "register"]:
+            # /users/register, endpoint for registering a new user account
+            case ["users", "register"]:
                 match request.method:
                     # register a new user account
                     case "POST":
@@ -38,8 +38,8 @@ def request_handler(request):
                     case _:
                         return http_response(405, "Invalid request method.")
             
-            # /user/login, endpoint for logging in with an existing user account
-            case ["user", "login"]:
+            # /users/login, endpoint for logging in with an existing user account
+            case ["users", "login"]:
                 match request.method:
                     # login a user account
                     case "POST":
@@ -48,8 +48,8 @@ def request_handler(request):
                     case _:
                         return http_response(404, "Invalid request method.")
                     
-            # /user/{id}, endpoint for managing a specific user account
-            case ["user", user_id]:
+            # /users/{id}, endpoint for managing a specific user account
+            case ["users", user_id]:
                 match request.method:
                     # get a user account
                     case "GET":
@@ -86,22 +86,22 @@ def get_users():
 def delete_users():
     pass
 
-# POST /user/register
+# POST /users/register
 def register_user():
     pass
 
-# POST /user/login
+# POST /users/login
 def login_user():
     pass
 
-# GET /user/{id}
+# GET /users/{id}
 def get_user():
     pass
 
-# PATCH /user/{id}
+# PATCH /users/{id}
 def update_user():
     pass
 
-# DELETE /user/{id}
+# DELETE /users/{id}
 def delete_user():
     pass

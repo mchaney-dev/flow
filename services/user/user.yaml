@@ -42,7 +42,7 @@ paths:
           $ref: '#/components/responses/500Error'
 
   # endpoint for registering a new account
-  /user/register:
+  /users/register:
     post:
       description: Create a new user account
       requestBody:
@@ -61,7 +61,7 @@ paths:
           $ref: '#/components/responses/500Error'
 
   # endpoint for logging in
-  /user/login:
+  /users/login:
     post:
       description: Login to an existing user account
       requestBody:
@@ -80,7 +80,7 @@ paths:
           $ref: '#/components/responses/500Error'
   
   # endpoint for individual users to retrieve and modify their account information
-  /user/{id}:
+  /users/{id}:
     parameters:
       - name: id
         description: The unique identifier of a user account

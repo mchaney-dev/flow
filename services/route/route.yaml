@@ -57,7 +57,7 @@ paths:
         '500':
           $ref: '#/components/responses/500Error'
 
-  /route/{id}:
+  /routes/{id}:
     parameters:
       - name: id
       description: The unique identifier of a route
