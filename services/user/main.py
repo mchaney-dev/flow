@@ -1,5 +1,6 @@
 from google.cloud import firestore
 import json
+import logging
 
 STATUS = {
     200: "OK",
@@ -19,16 +20,20 @@ def request_handler(request):
     try:
         # default to using an empty dict if data is None
         data = request.get_json(silent=True) or {}
+        logging.debug(f"Raw request data: {data}")
 
         # split parts of the path up into a list
         path = request.path.strip("/").split("/")
         # store query parameters
         query_params = request.args
+        logging.debug(f"Query parameters: {query_params}")
 
         # dynamically parse path parameters
+        user_id = ""
         if len(path) == 2 and path[0] == "users":
             if path[1] not in ["register", "login"]:
                 user_id = path[1]
+                logging.debug(f"User ID path parameter: {user_id}")
 
         # route HTTP requests based on endpoint
         match path:
@@ -43,6 +48,7 @@ def request_handler(request):
                         return delete_users()
                     # handle invalid request method
                     case _:
+                        logging.error(f"Invalid request method: {request.method}")
                         return http_response(405)
             
             # /users/register, endpoint for registering a new user account
@@ -53,6 +59,7 @@ def request_handler(request):
                         return register_user(data)
                     # handle invalid request method
                     case _:
+                        logging.error(f"Invalid request method: {request.method}")
                         return http_response(405)
             
             # /users/login, endpoint for logging in with an existing user account
@@ -63,7 +70,8 @@ def request_handler(request):
                         return login_user(data)
                     # handle invalid request method
                     case _:
-                        return http_response(404)
+                        logging.error(f"Invalid request method: {request.method}")
+                        return http_response(405)
                     
             # /users/{id}, endpoint for managing a specific user account
             case ["users", user_id]:
@@ -79,11 +87,14 @@ def request_handler(request):
                         return delete_user(user_id)
                     # handle invalid request method
                     case _:
+                        logging.error(f"Invalid request method: {request.method}")
                         return http_response(405)
             # handle invalid endpoint
             case _:
+                logging.error(f"Invalid resource: {request.path}")
                 return http_response(404)
     except Exception as e:
+        logging.error(f"Internal server error: {e}")
         return http_response(500)
 
 # utility function to form a consistent HTTP response
@@ -97,6 +108,7 @@ def http_response(status: int):
             {"Content-Type": "application/json"}
         )
     except Exception as e:
+        logging.error(f"Internal server error: {e}")
         return (
             json.dumps({"message": STATUS[500]}),
             500,
