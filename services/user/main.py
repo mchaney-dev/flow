@@ -184,12 +184,24 @@ def delete_users(query_params=None):
                 query = query.where("AccountType", "==", query_params["type"])
         
         docs =  list(query.stream())
+
+        batch = db.batch()
         deleted_ids = []
-        for doc in docs:
-            doc.reference.delete()
+
+        for i, doc in enumerate(docs):
+            batch.delete(doc.reference)
             deleted_ids.append(doc.id)
         
+            # commit every 500 deletes for batch deleting
+            if (i + 1) % 500 == 0:
+                batch.commit()
+                batch = db.batch()
+        # commit remaining deletes
+        if len(docs) % 500 != 0:
+            batch.commit()
+        
         response = {
+            "deletedUserCount": len(deleted_ids),
             "deletedUserIds": deleted_ids
         }
 
