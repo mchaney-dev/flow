@@ -15,6 +15,29 @@ paths:
   /users:
     get:
       description: Returns a list of user accounts
+      parameters:
+        # filter by account type
+        - name: type
+        in: query
+        description: The type of user account to retrieve
+        required: false
+        schema:
+          $ref: '#/components/schemas/AccountType'
+        # pagination
+        - name: limit
+        in: query
+        description: Limits the number of items on a page
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+        # pagination
+        - name: start_after
+        in: query
+        description: Base64-encoded document ID of the last item from the previous page (used for pagination)
+        required: false
+        schema:
+          type: string
 
       responses:
         '200':
