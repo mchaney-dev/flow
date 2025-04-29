@@ -82,9 +82,9 @@ def request_handler(request):
                         return http_response(405)
             # handle invalid endpoint
             case _:
-                return http_response(404, "Invalid endpoint.")
+                return http_response(404)
     except Exception as e:
-        return http_response(500, f"Internal server error: {str(e)}")
+        return http_response(500)
 
 # utility function to form a consistent HTTP response
 def http_response(status: int):
