@@ -258,7 +258,37 @@ def register_user(data):
 
 # POST /users/login
 def login_user(data):
-    pass
+    try:
+        query = users
+
+        if "email" not in data:
+            logging.error(f"Missing 'email' in request body")
+            http_response(400)
+        if "password" not in data:
+            logging.error(f"Missing 'password' in request body")
+            http_response(400)
+
+        email = data["email"].strip().lower()
+        password = data["password"]
+
+        query_result = query.where("email", "==", email).limit(1).stream()
+        doc = next(query_result, None)
+
+        if not doc:
+            logging.error(f"Invalid email")
+            return http_response(401)
+        
+        user_data = doc.to_dict()
+        stored_password = user_data.get("password", "")
+        # verify password
+        if not bcrypt.checkpw(password.encode("utf-8"), stored_password.encode("utf-8")):
+            logging.error(f"Invalid password")
+            return http_response(401)
+        
+        return http_response(200)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
 
 # GET /users/{id}
 def get_user():
