@@ -149,7 +149,7 @@ def get_users(query_params=None):
                 limit = int(query_params["limit"])
                 query = query.limit(limit)
             except Exception as e:
-                logging.error(f"Invalid limit parameter: {query_params["limit"]}")
+                logging.error(f"Invalid limit parameter: {query_params['limit']}")
                 return http_response(400)
 
         # filter - pagination start_after
@@ -164,7 +164,7 @@ def get_users(query_params=None):
                 if last_doc.exists:
                     query = query.start_after(last_doc)
                 else:
-                    logging.error(f"Invalid start_after ID: {query_params["start_after"]}")
+                    logging.error(f"Invalid start_after ID: {query_params['start_after']}")
                     return http_response(400)
             except Exception as e:
                 logging.error(f"Internal server error: {e}")
@@ -258,7 +258,7 @@ def register_user(data):
             return http_response(400)
         # invalid type
         if data.get("type") not in ["user", "admin"]:
-            logging.error(f"Invalid user type: {data.get("type")}")
+            logging.error(f"Invalid user type: {data.get('type')}")
             return http_response(400)
     
         password = bcrypt.hashpw(data["password"].encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
