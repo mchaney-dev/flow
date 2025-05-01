@@ -1,6 +1,7 @@
 from google.cloud import firestore
 import json
 import logging
+import re
 
 STATUS = {
     200: "OK",
@@ -22,9 +23,60 @@ def get_routes_collection():
 
 def request_handler(request):
     try:
-        pass
+        # default to using an empty dict if data is None
+        data = request.get_json(silent=True) or {}
+        logging.debug(f"Raw request data: {data}")
+
+        # split parts of the path up into a list
+        path = request.path.strip("/").split("/")
+        # store query parameters
+        query_params = request.args
+        logging.debug(f"Query parameters: {query_params}")
+
+        # dynamically parse path parameters
+        route_id = ""
+        if len(path) == 2 and path[0] == "routes":
+            route_id = path[1]
+            logging.debug(f"Route ID path parameter: {route_id}")
+
+       # route HTTP requests based on endpoint
+        match path:
+            # /routes, endpoint for managing all routes
+            case ["routes"]:
+                match request.method:
+                    # get a list of all routes
+                    case "GET":
+                        return get_routes(query_params)
+                    # delete all routes
+                    case "DELETE":
+                        return delete_routes(query_params)
+                    # handle invalid request method
+                    case _:
+                        logging.error(f"Invalid request method: {request.method}")
+                        return http_response(405)
+            # /routes/{id}, endpoint for managing a specific route
+            case ["routes", route_id]:
+                match request.method:
+                    # get a route
+                    case "GET":
+                        return get_route(route_id)
+                    # update a route
+                    case "PATCH":
+                        return update_route(route_id)
+                    # delete a route
+                    case "DELETE":
+                        return delete_route(route_id)
+                    # handle invalid request method
+                    case _:
+                        logging.error(f"Invalid request method: {request.method}")
+                        return http_response(405)
+            # handle invalid endpoint
+            case _:
+                logging.error(f"Invalid resource: {request.path}")
+                return http_response(404)
     except Exception as e:
-        pass
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
 
 # utility function to form a consistent HTTP response
 def http_response(status: int, data=None):
@@ -54,15 +106,129 @@ def http_response(status: int, data=None):
     
 # GET /routes
 def get_routes(query_params=None):
-    pass
+    routes = get_routes_collection()
+    query = routes
+    docs = []
 
-# POST /routes
-def create_route(data):
-    pass
+    # query params not implemented yet
+    if query_params:
+        return NotImplementedError()
+    
+    try:
+        docs = list(query.stream())
+        query_result = [doc.to_dict() for doc in docs]
+
+        data = {
+            "routes": query_result
+        }
+
+        return http_response(200, data)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
 
 # DELETE /routes
 def delete_routes(query_params=None):
-    pass
+    try:
+        db = get_db()
+        routes = get_routes_collection()
+        query = routes
+
+        # query params not implemented yet
+        if query_params:
+            return NotImplementedError()
+        
+        docs = list(query.stream())
+
+        batch = db.batch()
+        deleted_ids = []
+
+        for i, doc in enumerate(docs):
+            batch.delete(doc.reference)
+            deleted_ids.append(doc.id)
+
+            # commit every 500 deletes for batch deleting
+            if (i + 1) % 500 == 0:
+                batch.commit()
+                batch = db.batch()
+        # commit remaining deletes
+        if len(docs) % 500 != 0:
+            batch.commit()
+        
+        data = {
+            "deletedRouteCount": len(deleted_ids),
+            "deletedRouteIds": deleted_ids
+        }
+
+        return http_response(200, data)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
+
+# POST /routes
+def create_route(data):
+    try:
+        routes = get_routes_collection()
+        query = routes
+
+        # account for missing fields
+        if not data.get("name"):
+            logging.error(f"Missing 'name' in request body")
+            return http_response(400)
+        if not data.get("stops"):
+            logging.error(f"Missing 'stops' in request body")
+            return http_response(400)
+        if not data.get("active"):
+            logging.error(f"Missing 'active' in request body")
+            return http_response(400)
+        
+        # normalize route name
+        name = data["name"].strip()
+        name = re.sub(r"\s+", " ", name)
+        name = name.title()
+
+        # account for invalid fields
+        # invalid name
+        if re.match(r"^[A-Za-z0-9\s-]+$", name) is None:
+            logging.error(f"Invalid route name: {name}. Cannot contain special characters or underscores.")
+            return http_response(400)
+        # invalid stops
+        if isinstance(data["stops"], list):
+            # normalize each stop in the list
+            for stop in data["stops"]:
+                if isinstance(stop, str):
+                    stop = stop.strip()
+                    stop = re.sub(r"\s+", " ", stop)
+                    stop = stop.title()
+
+                    if re.match(r"^[A-Za-z0-9\s-]+$", stop) is None:
+                        logging.error(f"Invalid stop name: {stop}. Cannot contain special characters or underscores.")
+                        return http_response(400)
+                else:
+                    logging.error(f"Stop must be a string")
+                    return http_response(400)
+        else:
+            logging.error(f"Field 'stops' is of type {type(data['stops'])}, must be array of strings")
+            return http_response(400)
+        # invalid active status
+        if not isinstance(data["active"], bool):
+            logging.error(f"Invalid active status: {data['active']}. Must be a boolean")
+            return http_response(400)
+        
+        # create new route
+        doc = routes.document()
+        route_id = doc.id
+        # id is automatically generated
+        data["id"] = route_id
+        data["name"] = name
+        # TODO: generate createdBy with authentication
+        data["createdBy"] = "test_user_id"
+        doc.set(data)
+
+        return http_response(201)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
 
 # GET /routes/{id}
 def get_route():
