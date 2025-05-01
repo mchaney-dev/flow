@@ -7,25 +7,22 @@ info:
 
 ### Server ###
 servers:
-  - url: placeholder
+  - url: 'https://www.example.com'
 
 ### Endpoints ###
 paths:
   /routes:
     get:
       description: Get all routes
-      parameters:
-        - $ref: '#/components/parameters/PageLimit'
-        - $ref: '#/components/parameters/PageNumber'
       responses:
         '200':
-          description:
+          description: Successfully retrieved routes
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  - $ref: '#/components/schemas/Route'
+                  $ref: '#/components/schemas/Route'
         '400':
           $ref: '#/components/responses/400Error'
         '500':
@@ -38,10 +35,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '$/components/schemas/Route'
+              $ref: '#/components/schemas/Route'
       responses:
         '200':
-          description:
+          description: Successfully created route
         '400':
           $ref: '#/components/responses/400Error'
         '500':
@@ -51,7 +48,7 @@ paths:
       description: Delete all routes
       responses:
         '200':
-          description:
+          description: Successfully deleted routes
         '400':
           $ref: '#/components/responses/400Error'
         '500':
@@ -70,7 +67,7 @@ paths:
       description: Get a route
       responses:
         '200':
-          description:
+          description: Successfully retrieved route
           content:
             application/json:
               schema:
@@ -89,10 +86,17 @@ paths:
             schema:
               type: object
               properties:
-                # properties of Route object
+                name:
+                  type: string
+                stops:
+                  type: array
+                  items:
+                    type: string
+                active:
+                  type: boolean
       responses:
         '200':
-          description:
+          description: Successfully updated route
         '400':
           $ref: '#/components/responses/400Error'
         '500':
@@ -102,7 +106,7 @@ paths:
       description: Delete a route
       responses:
         '200':
-          description:
+          description: Successfully deleted route
         '400':
           $ref: '#/components/responses/400Error'
         '500':
@@ -110,23 +114,6 @@ paths:
 
 ### Components ###
 components:
-  ### Parameters ###
-  parameters:
-    PageLimit:
-      name: limit
-      in: query
-      required: false
-      description: Limits the number of items on a page.
-      schema:
-        type: integer
-    
-    PageNumber:
-      name: page
-      in: query
-      required: false
-      description: The page number to be displayed.
-      schema:
-        type: integer
   
   ### Responses ###
   responses:
@@ -157,5 +144,22 @@ components:
     Route:
       description:
       type: object
+      required:
+        - id
+        - name
+        - stops
       properties:
-        # properties
+        id:
+          type: string
+        name:
+          type: string
+        stops:
+          type: array
+          items:
+            type: string
+        createdBy:
+          type: string
+          description: ID of the user who created the route
+        active:
+          type: boolean
+          default: true
