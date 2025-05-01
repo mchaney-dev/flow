@@ -141,15 +141,21 @@ def get_users(query_params=None):
     if query_params:
         # filter - AccountType
         if "type" in query_params:
-            query = query.where("AccountType", "==", query_params["type"])
+            # account for invalid type
+            if "type" in ["user", "admin"]:
+                query = query.where("type", "==", query_params["type"])
+            else:
+                logging.error(f"Invalid type: {query_params['type']}")
+                return http_response(400)
         
         # filter - pagination limit
         if "limit" in query_params:
-            try:
+            # account for invalid limit
+            if limit is int and limit > 0:
                 limit = int(query_params["limit"])
                 query = query.limit(limit)
-            except Exception as e:
-                logging.error(f"Invalid limit parameter: {query_params['limit']}")
+            else:
+                logging.error(f"Invalid limit: {query_params['limit']}")
                 return http_response(400)
 
         # filter - pagination start_after
@@ -199,9 +205,14 @@ def delete_users(query_params=None):
         if query_params:
             # filter - AccountType
             if "type" in query_params:
-                query = query.where("AccountType", "==", query_params["type"])
+                # account for invalid type
+                if query_params["type"] in ["user", "admin"]:
+                    query = query.where("type", "==", query_params["type"])
+                else:
+                    logging.error(f"Invalid type: {query_params['type']}")
+                    return http_response(400)
         
-        docs =  list(query.stream())
+        docs = list(query.stream())
 
         batch = db.batch()
         deleted_ids = []
@@ -289,10 +300,10 @@ def login_user(data):
         users = get_users_collection()
         query = users
 
-        if "email" not in data:
+        if not data.get("email"):
             logging.error(f"Missing 'email' in request body")
             http_response(400)
-        if "password" not in data:
+        if not data.get("password"):
             logging.error(f"Missing 'password' in request body")
             http_response(400)
 
@@ -300,11 +311,7 @@ def login_user(data):
         password = data["password"]
 
         query_result = query.where("email", "==", email).limit(1).stream()
-        doc = next(query_result, None)
-
-        if not doc:
-            logging.error(f"Invalid email")
-            return http_response(401)
+        doc = next(iter(query_result), None)
         
         user_data = doc.to_dict()
         stored_password = user_data.get("password", "")
