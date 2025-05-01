@@ -3,6 +3,7 @@ import json
 import logging
 import base64
 import bcrypt
+import re
 
 STATUS = {
     200: "OK",
@@ -15,9 +16,12 @@ STATUS = {
     500: "Internal Server Error"
 }
 
-# initialize firestore client
-db = firestore.Client()
-users = db.collection("users")
+def get_db():
+    return firestore.Client()
+
+def get_users_collection():
+    db = get_db()
+    return db.collection("users")
 
 def request_handler(request):
     try:
@@ -128,6 +132,7 @@ def http_response(status: int, data=None):
 
 # GET /users
 def get_users(query_params=None):
+    users = get_users_collection()
     query = users
     limit = None
     docs = []
@@ -187,6 +192,8 @@ def get_users(query_params=None):
 # DELETE /users
 def delete_users(query_params=None):
     try:
+        db = get_db()
+        users = get_users_collection()
         query = users
 
         if query_params:
@@ -224,16 +231,36 @@ def delete_users(query_params=None):
 # POST /users/register
 def register_user(data):
     try:
+        users = get_users_collection()
         query = users
 
-        if "email" not in data:
+        # account for missing fields
+        if not data.get("email"):
             logging.error(f"Missing 'email' in request body")
             return http_response(400)
-        if "password" not in data:
+        if not data.get("password"):
             logging.error(f"Missing 'password' in request body")
             return http_response(400)
-    
+        if not data.get("type"):
+            logging.error(f"Missing 'type' in request body")
+            return http_response(400)
+        
         email = data["email"].strip().lower()
+
+        # account for invalid fields
+        # invalid email
+        if re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email) is None:
+            logging.error(f"Invalid email: {email}")
+            return http_response(400)
+        # invalid password
+        if re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$", data.get("password")) is None:
+            logging.error(f"Invalid password. Must be at least 8 characters, contain at least one uppercase and one lowercase letter, at least one digit, and at least one special character: !, @, #, $, %, ^, &, *, (, )")
+            return http_response(400)
+        # invalid type
+        if data.get("type") not in ["user", "admin"]:
+            logging.error(f"Invalid user type: {data.get("type")}")
+            return http_response(400)
+    
         password = bcrypt.hashpw(data["password"].encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
         # check for accounts that already use this email
@@ -259,6 +286,7 @@ def register_user(data):
 # POST /users/login
 def login_user(data):
     try:
+        users = get_users_collection()
         query = users
 
         if "email" not in data:
