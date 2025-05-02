@@ -7,28 +7,234 @@ info:
 
 ### Server ###
 servers:
-  - url: placeholder
+  - url: 'https://www.example.com'
 
 ### Endpoints ###
 paths:
-  # admin-only
   /reports:
     get:
       description: Get all reports
+      parameters:
+        # filter by report type
+        - name: type
+        in: query
+        description: The type of report to retrieve
+        required: false
+        schema:
+          $ref: '#/components/schemas/ReportType'
+        # filter by date
+        - name: date
+        in: query
+        description: The date the report was posted
+        required: false
+        schema:
+          type: string
+          format: date
+        # filter by time
+        - name: time
+        in: query
+        description: The time the report was posted
+        required: false
+        schema:
+          type: string
+          format: time
+        # filter by route
+        - name: route
+        in: query
+        description: The route the report was posted about
+        required: false
+        schema:
+          type: string
+      
+      responses:
+        '200':
+          description: Successfully retrieved reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Report'
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+    
     delete:
       description: Delete all reports
-  /reports/new:
+      parameters:
+        # filter by report type
+        - name: type
+        in: query
+        description: The type of report to delete
+        required: false
+        schema:
+          $ref: '#/components/schemas/ReportType'
+        # filter by date
+        - name: date
+        in: query
+        description: The date the report was posted
+        required: false
+        schema:
+          type: string
+          format: date
+        # filter by time
+        - name: time
+        in: query
+        description: The time the report was posted
+        required: false
+        schema:
+          type: string
+          format: time
+        # filter by route
+        - name: route
+        in: query
+        description: The route the report was posted about
+        required: false
+        schema:
+          type: string
+
+      responses:
+        '200':
+          description: Successfully deleted reports
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
     post:
       description: Post a report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Report'
+      
+      responses:
+        '200':
+          description: Successfully posted report
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+  
   /reports/{id}:
+    parameters:
+      - name: id
+      description: The unique identifier of a report
+      in: path
+      required: true
+      schema:
+        type: string
+    
     get:
-      description: Get a report
+      description: Get a report by id
+
+      responses:
+        '200':
+          description: Successfully retrieved report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
     patch:
       description: Update a report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                # properties
+      
+      responses:
+        '200': 
+          description: Successfully updated report
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+    
     delete:
       description: Delete a report
 
-### Schemas ###
+      responses:
+        '200':
+          description: Successfully deleted report
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
+### Components ###
 components:
+
+  ### Schemas ###
   schemas:
+
+    ReportType:
+      description: The type of the report
+      type: string
+      enum:
+        - delay
+        - no-show
+        - early departure
+        - route change
+        - overcrowding
+        - missed stop
+        - accessibility issues
+    
     Report:
+      description: A Flow report
+      type: object
+      required:
+        - id
+        - type
+        - route
+        - timestamp
+        - createdBy
+      properties:
+        id:
+          type: string
+        type:
+          $ref: '#/components/schemas/ReportType'
+        route:
+          type: string
+        stop:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+
+  ### Responses ###
+  responses:
+    400Error:
+      description: Invalid client request.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                description: A human-readable error message
+                type: string
+
+    500Error:
+      description: The server encountered an error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                description: A human-readable error message
+                type: string
