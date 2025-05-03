@@ -57,12 +57,15 @@ def request_handler(request):
             # /routes/{id}, endpoint for managing a specific route
             case ["routes", route_id]:
                 match request.method:
+                    # create a new route
+                    case "POST":
+                        return create_route(data)
                     # get a route
                     case "GET":
                         return get_route(route_id)
                     # update a route
                     case "PATCH":
-                        return update_route(route_id)
+                        return update_route(route_id, data)
                     # delete a route
                     case "DELETE":
                         return delete_route(route_id)
@@ -231,13 +234,117 @@ def create_route(data):
         return http_response(500)
 
 # GET /routes/{id}
-def get_route():
-    pass
+def get_route(route_id):
+    routes = get_routes_collection()
+    query = routes
+    docs = []
+    
+    try:
+        docs = list(query.where("id", "==", route_id).stream())
+        if not docs:
+            logging.error(f"Route with ID {route_id} not found")
+            return http_response(404)
+        # check if more than one route with the same ID exists
+        if len(docs) > 1:
+            logging.error(f"Multiple routes with ID {route_id} found")
+            return http_response(500)
+        data = docs[0].to_dict()
+
+        return http_response(200, data)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
 
 # PATCH /routes/{id}
-def update_route(data):
-    pass
+def update_route(route_id, data):
+    try:
+        routes = get_routes_collection()
+        query = routes
+        docs = []
+        db = get_db()
+
+
+        # account for missing fields
+        if not data.get("name"):
+            logging.error(f"Missing 'name' in request body")
+            return http_response(400)
+        if not data.get("stops"):
+            logging.error(f"Missing 'stops' in request body")
+            return http_response(400)
+        if not data.get("active"):
+            logging.error(f"Missing 'active' in request body")
+            return http_response(400)
+
+        # normalize route name
+        name = data["name"].strip()
+        name = re.sub(r"\s+", " ", name)
+        name = name.title()
+
+        # account for invalid fields
+        # invalid name
+        if re.match(r"^[A-Za-z0-9\s-]+$", name) is None:
+            logging.error(f"Invalid route name: {name}. Cannot contain special characters or underscores.")
+            return http_response(400)
+        # invalid stops
+        if isinstance(data["stops"], list): # check if stops is a list
+            # normalize each stop in the list
+            for bus_stop in data["stops"]:
+                if isinstance(bus_stop, str): # check if stop is a string
+                    bus_stop = bus_stop.strip()
+                    bus_stop = re.sub(r"\s+", " ", bus_stop)
+                    bus_stop = bus_stop.title()
+
+                    if re.match(r"^[A-Za-z0-9\s-]+$", bus_stop) is None:
+                        logging.error(f"Invalid stop name: {bus_stop}. Cannot contain special characters or underscores.")
+                        return http_response(400)
+                else: # stop is not a string, invalid
+                    logging.error(f"Stop must be a string")
+                    return http_response(400)
+        else: # stops isn't a list, invalid
+            logging.error(f"Field 'stops' is of type {type(data['stops'])}, must be array of strings")
+            return http_response(400)
+        # invalid active status
+        if not isinstance(data["active"], bool):
+            logging.error(f"Invalid active status: {data['active']}. Must be a boolean")
+            return http_response(400)
+        
+        docs = list(query.where("id", "==", route_id).stream())
+        if not docs:
+            logging.error(f"Route with ID {route_id} not found")
+            return http_response(404)
+        if len(docs) > 1:
+            logging.error(f"Multiple routes with ID {route_id} found")
+            return http_response(500)
+        doc = docs[0]
+        # update route
+        # instead of making batch from db, i want to access a single reference in it
+
+        route_ref_from_db = db.collection("routes").document(doc.id)
+
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
 
 # DELETE /routes/{id}
-def delete_route():
-    pass
+def delete_route(route_id):
+    try:
+        routes = get_routes_collection()
+        query = routes
+        docs = []
+
+        docs = list(query.where("id", "==", route_id).stream())
+        if not docs:
+            logging.error(f"Route with ID {route_id} not found")
+            return http_response(404)
+        # check if more than one route with the same ID exists
+        if len(docs) > 1:
+            logging.error(f"Multiple routes with ID {route_id} found")
+            return http_response(500)
+
+        doc = docs[0]
+        doc.reference.delete()
+
+        return http_response(200)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
