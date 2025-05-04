@@ -259,54 +259,52 @@ def get_route(route_id):
 def update_route(route_id, data):
     try:
         routes = get_routes_collection()
-        query = routes
-        docs = []
         db = get_db()
+        query = routes
 
+        updates = {}
 
-        # account for missing fields
-        if not data.get("name"):
-            logging.error(f"Missing 'name' in request body")
-            return http_response(400)
-        if not data.get("stops"):
-            logging.error(f"Missing 'stops' in request body")
-            return http_response(400)
-        if not data.get("active"):
-            logging.error(f"Missing 'active' in request body")
-            return http_response(400)
+        if "name" in data.keys():
+            # normalize route name
+            name = data["name"].strip()
+            name = re.sub(r"\s+", " ", name)
+            name = name.title()
 
-        # normalize route name
-        name = data["name"].strip()
-        name = re.sub(r"\s+", " ", name)
-        name = name.title()
+            # invalid name
+            if re.match(r"^[A-Za-z0-9\s-]+$", name) is None:
+                logging.error(f"Invalid route name: {name}. Cannot contain special characters or underscores.")
+                return http_response(400)
+            updates.update({"name": name})
+        
+        if "stops" in data.keys():
+            # invalid stops
+            if isinstance(data["stops"], list):
+                # normalize each stop in the list
+                normalized_stops = []
+                for bus_stop in data["stops"]:
+                    if isinstance(bus_stop, str):
+                        bus_stop = bus_stop.strip()
+                        bus_stop = re.sub(r"\s+", " ", bus_stop)
+                        bus_stop = bus_stop.title()
 
-        # account for invalid fields
-        # invalid name
-        if re.match(r"^[A-Za-z0-9\s-]+$", name) is None:
-            logging.error(f"Invalid route name: {name}. Cannot contain special characters or underscores.")
-            return http_response(400)
-        # invalid stops
-        if isinstance(data["stops"], list): # check if stops is a list
-            # normalize each stop in the list
-            for bus_stop in data["stops"]:
-                if isinstance(bus_stop, str): # check if stop is a string
-                    bus_stop = bus_stop.strip()
-                    bus_stop = re.sub(r"\s+", " ", bus_stop)
-                    bus_stop = bus_stop.title()
-
-                    if re.match(r"^[A-Za-z0-9\s-]+$", bus_stop) is None:
-                        logging.error(f"Invalid stop name: {bus_stop}. Cannot contain special characters or underscores.")
+                        if re.match(r"^[A-Za-z0-9\s-]+$", bus_stop) is None:
+                            logging.error(f"Invalid stop name: {bus_stop}. Cannot contain special characters or underscores.")
+                            return http_response(400)
+                    else:
+                        logging.error(f"Stop must be a string")
                         return http_response(400)
-                else: # stop is not a string, invalid
-                    logging.error(f"Stop must be a string")
-                    return http_response(400)
-        else: # stops isn't a list, invalid
-            logging.error(f"Field 'stops' is of type {type(data['stops'])}, must be array of strings")
-            return http_response(400)
-        # invalid active status
-        if not isinstance(data["active"], bool):
-            logging.error(f"Invalid active status: {data['active']}. Must be a boolean")
-            return http_response(400)
+                    normalized_stops.append(bus_stop)
+            else:
+                logging.error(f"Field 'stops' is of type {type(data['stops'])}, must be array of strings")
+                return http_response(400)
+            updates.update({"stops": normalized_stops})
+            
+        if "active" in data.keys():
+            # invalid active status
+            if not isinstance(data["active"], bool):
+                logging.error(f"Invalid active status: {data['active']}. Must be a boolean")
+                return http_response(400)
+            updates.update({"active": data["active"]})
         
         docs = list(query.where("id", "==", route_id).stream())
         if not docs:
@@ -315,12 +313,12 @@ def update_route(route_id, data):
         if len(docs) > 1:
             logging.error(f"Multiple routes with ID {route_id} found")
             return http_response(500)
-        doc = docs[0]
+
         # update route
-        # instead of making batch from db, i want to access a single reference in it
+        route_ref = db.collection("routes").document(docs[0].id)
+        route_ref.update(updates)
 
-        route_ref_from_db = db.collection("routes").document(doc.id)
-
+        return http_response(200)
     except Exception as e:
         logging.error(f"Internal server error: {e}")
         return http_response(500)
