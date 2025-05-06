@@ -272,7 +272,7 @@ def update_route(route_id, data):
             return http_response(404)
         if "name" in data.keys():
             if not isinstance(data["name"], str):
-                logging.error(f"Invalid route name: {data["name"]}, must be string")
+                logging.error(f"Invalid route name: {data['name']}, must be string")
                 return http_response(400)
             # normalize route name
             name = data["name"].strip()
