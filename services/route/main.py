@@ -248,7 +248,10 @@ def get_route(route_id):
         if len(docs) > 1:
             logging.error(f"Multiple routes with ID {route_id} found")
             return http_response(500)
-        data = docs[0].to_dict()
+        
+        data = {
+            "route": docs[0].to_dict()
+        }
 
         return http_response(200, data)
     except Exception as e:
@@ -263,8 +266,14 @@ def update_route(route_id, data):
         query = routes
 
         updates = {}
-
+        
+        if not isinstance(route_id, str) or route_id == "":
+            logging.error(f"Invalid route ID: {route_id}, must be string")
+            return http_response(404)
         if "name" in data.keys():
+            if not isinstance(data["name"], str):
+                logging.error(f"Invalid route name: {data['name']}, must be string")
+                return http_response(400)
             # normalize route name
             name = data["name"].strip()
             name = re.sub(r"\s+", " ", name)
@@ -278,11 +287,11 @@ def update_route(route_id, data):
         
         if "stops" in data.keys():
             # invalid stops
-            if isinstance(data["stops"], list):
+            if isinstance(data["stops"], list) and len(data["stops"]) > 0:
                 # normalize each stop in the list
                 normalized_stops = []
                 for bus_stop in data["stops"]:
-                    if isinstance(bus_stop, str):
+                    if isinstance(bus_stop, str) and bus_stop != "":
                         bus_stop = bus_stop.strip()
                         bus_stop = re.sub(r"\s+", " ", bus_stop)
                         bus_stop = bus_stop.title()
@@ -330,6 +339,9 @@ def delete_route(route_id):
         query = routes
         docs = []
 
+        if not isinstance(route_id, str) or route_id == "":
+            logging.error(f"Invalid route ID: {route_id}, must be string")
+            return http_response(404)
         docs = list(query.where("id", "==", route_id).stream())
         if not docs:
             logging.error(f"Route with ID {route_id} not found")

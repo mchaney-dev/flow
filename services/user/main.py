@@ -16,6 +16,11 @@ STATUS = {
     500: "Internal Server Error"
 }
 
+user_types = [
+    "user",
+    "admin"
+]
+
 def get_db():
     return firestore.Client()
 
@@ -142,7 +147,7 @@ def get_users(query_params=None):
         # filter - AccountType
         if "type" in query_params:
             # account for invalid type
-            if "type" in ["user", "admin"]:
+            if "type" in user_types:
                 query = query.where("type", "==", query_params["type"])
             else:
                 logging.error(f"Invalid type: {query_params['type']}")
@@ -206,7 +211,7 @@ def delete_users(query_params=None):
             # filter - AccountType
             if "type" in query_params:
                 # account for invalid type
-                if query_params["type"] in ["user", "admin"]:
+                if query_params["type"] in user_types:
                     query = query.where("type", "==", query_params["type"])
                 else:
                     logging.error(f"Invalid type: {query_params['type']}")
@@ -268,7 +273,7 @@ def register_user(data):
             logging.error(f"Invalid password. Must be at least 8 characters, contain at least one uppercase and one lowercase letter, at least one digit, and at least one special character: !, @, #, $, %, ^, &, *, (, )")
             return http_response(400)
         # invalid type
-        if data.get("type") not in ["user", "admin"]:
+        if data.get("type") not in user_types:
             logging.error(f"Invalid user type: {data.get('type')}")
             return http_response(400)
     
@@ -326,13 +331,91 @@ def login_user(data):
         return http_response(500)
 
 # GET /users/{id}
-def get_user():
-    pass
+def get_user(user_id):
+    users = get_users_collection()
+    query = users
+    docs = []
+
+    try:
+        docs = list(query.where("id", "==", user_id).stream())
+        if not docs:
+            logging.error(f"User with ID {user_id} not found")
+            return http_response(404)
+        # check if more than one user with the same ID exists
+        if len(docs) > 1:
+            logging.error(f"Multiple users with ID {user_id} found")
+            return http_response(500)
+        data = docs[0].to_dict()
+
+        return http_response(200, data)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
 
 # PATCH /users/{id}
-def update_user(data):
-    pass
+def update_user(user_id, data):
+    try:
+        users = get_users_collection()
+        db = get_db()
+        query = users
+
+        updates = {}
+
+        if "email" in data.keys():
+            # normalize email
+            email = data["email"].strip().lower()
+
+            # invalid email
+            if re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email) is None:
+                logging.error(f"Invalid email: {email}")
+                return http_response(400)
+            updates.update({"email": email})
+        
+        if "type" in data.keys():
+            # invalid type
+            if data["type"] not in user_types:
+                logging.error(f"Invalid user type: {data['type']}")
+                return http_response(400)
+            updates.update({"type": data["type"]})
+
+        docs = list(query.where("id", "==", user_id).stream())
+        if not docs:
+            logging.error(f"User with ID {user_id} not found")
+            return http_response(404)
+        if len(docs) > 1:
+            logging.error(f"Multiple users with ID {user_id} found")
+            return http_response(500)
+
+        # update user
+        user_ref = db.collection("users").document(docs[0].id)
+        user_ref.update(updates)
+
+        return http_response(200)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
+
 
 # DELETE /users/{id}
-def delete_user():
-    pass
+def delete_user(user_id):
+    try:
+        users = get_users_collection()
+        query = users
+        docs = []
+
+        docs = list(query.where("id", "==", user_id).stream())
+        if not docs:
+            logging.error(f"User with ID {user_id} not found")
+            return http_response(404)
+        # check if more than one user with the same ID exists
+        if len(docs) > 1:
+            logging.error(f"Multiple users with ID {user_id} found")
+            return http_response(500)
+
+        doc = docs[0]
+        doc.reference.delete()
+
+        return http_response(200)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)

@@ -278,3 +278,312 @@ def test_create_route_invalid_active_status_fail(mock_routes_collection, invalid
     response = create_route(invalid_data)
 
     assert response == expected
+
+# get_route tests
+@patch("main.get_routes_collection")
+def test_get_route_success(mock_routes_collection):
+    route = {
+        "id": "1",
+        "name": "Sample Route",
+        "stops": [
+            "Stop 1",
+            "Stop 2",
+            "Stop 3"
+        ],
+        "createdBy": "test_user_id",
+        "active": True
+    }
+
+    mock_route_doc = MagicMock()
+    mock_route_doc.to_dict.return_value = route
+
+    mock_query = MagicMock()
+    mock_query.stream.return_value = [mock_route_doc]
+
+    mock_collection = MagicMock()
+    mock_collection.where.return_value = mock_query
+
+    mock_routes_collection.return_value = mock_collection
+
+    expected = (
+        json.dumps({
+            "message": "OK",
+            "data": {
+                "route": route
+            }
+        }),
+        200,
+        {
+            "Content-Type": "application/json"
+        }
+    )
+    
+    response = get_route(route["id"])
+
+    assert response == expected
+
+@patch("main.get_routes_collection")
+@pytest.mark.parametrize("invalid_data", ["", 0, None])
+def test_get_route_invalid_id_fail(mock_routes_collection, invalid_data):
+    mock_query = MagicMock()
+    mock_query.stream.return_value = []
+
+    mock_collection = MagicMock()
+    mock_collection.where.return_value = mock_query
+
+    mock_routes_collection.return_value = mock_collection
+    
+    expected = (
+        json.dumps({
+            "message": "Not Found",
+            "data": ""
+        }),
+        404,
+        {
+            "Content-Type": "application/json"
+        }
+    )
+
+    response = get_route(invalid_data)
+
+    assert response == expected
+
+# update_route tests
+@patch("main.get_db")
+@patch("main.get_routes_collection")
+def test_update_route_success(mock_routes_collection, mock_get_db):
+    route_id = "1"
+    data = {
+        "id": route_id,
+        "name": "Sample Route"
+    }
+
+    mock_route_doc = MagicMock()
+
+    # mock query
+    mock_query = MagicMock()
+    mock_query.where.return_value.stream.return_value = [mock_route_doc]
+    mock_routes_collection.return_value = mock_query
+
+    mock_route_doc_ref = MagicMock()
+    mock_collection = MagicMock()
+    mock_collection.return_value = mock_route_doc_ref
+
+    mock_db = MagicMock()
+    mock_db.collection.return_value = mock_collection
+    mock_get_db.return_value = mock_db
+
+    expected = (
+        json.dumps({
+            "message": "OK",
+            "data": ""
+        }),
+        200,
+        {
+            "Content-Type": "application/json"
+        }
+    )
+
+    response = update_route(route_id, data)
+
+    assert response == expected
+
+@patch("main.get_db")
+@patch("main.get_routes_collection")
+@pytest.mark.parametrize("invalid_data", ["", 0, None])
+def test_update_route_invalid_id_fail(mock_routes_collection, mock_get_db, invalid_data):
+    data = {
+        "name": "Sample Route"
+    }
+
+    mock_route_doc = MagicMock()
+
+    # mock query
+    mock_query = MagicMock()
+    mock_query.where.return_value.stream.return_value = [mock_route_doc]
+    mock_routes_collection.return_value = mock_query
+
+    mock_get_db.return_value = MagicMock()
+
+    expected = (
+        json.dumps({
+            "message": "Not Found",
+            "data": ""
+        }),
+        404,
+        {
+            "Content-Type": "application/json"
+        }
+    )
+
+    response = update_route(invalid_data, data)
+
+    assert response == expected
+
+@patch("main.get_db")
+@patch("main.get_routes_collection")
+@pytest.mark.parametrize("invalid_data", ["some_name", None, "", "   ", "somename!"])
+def test_update_route_invalid_name_fail(mock_routes_collection, mock_get_db, invalid_data):
+    route_id = "1"
+    
+    mock_route_doc = MagicMock()
+
+    # mock query
+    mock_query = MagicMock()
+    mock_query.where.return_value.stream.return_value = [mock_route_doc]
+    mock_routes_collection.return_value = mock_query
+
+    mock_route_doc_ref = MagicMock()
+    mock_collection = MagicMock()
+    mock_collection.return_value = mock_route_doc_ref
+
+    mock_db = MagicMock()
+    mock_db.collection.return_value = mock_collection
+    mock_get_db.return_value = mock_db
+
+    expected = (
+        json.dumps({
+            "message": "Bad Request",
+            "data": ""
+        }),
+        400,
+        {
+            "Content-Type": "application/json"
+        }
+    )
+
+    response = update_route(route_id, {"name": invalid_data})
+
+    assert response == expected
+
+@patch("main.get_db")
+@patch("main.get_routes_collection")
+@pytest.mark.parametrize("invalid_data", [
+    None,
+    "",
+    [None, None, None],
+    [],
+    [""]
+])
+def test_update_route_invalid_stops_fail(mock_routes_collection, mock_get_db, invalid_data):
+    route_id = "1"
+    
+    mock_route_doc = MagicMock()
+
+    # mock query
+    mock_query = MagicMock()
+    mock_query.where.return_value.stream.return_value = [mock_route_doc]
+    mock_routes_collection.return_value = mock_query
+
+    mock_route_doc_ref = MagicMock()
+    mock_collection = MagicMock()
+    mock_collection.return_value = mock_route_doc_ref
+
+    mock_db = MagicMock()
+    mock_db.collection.return_value = mock_collection
+    mock_get_db.return_value = mock_db
+
+    expected = (
+        json.dumps({
+            "message": "Bad Request",
+            "data": ""
+        }),
+        400,
+        {
+            "Content-Type": "application/json"
+        }
+    )
+
+    response = update_route(route_id, {"stops": invalid_data})
+
+    assert response == expected
+
+@patch("main.get_db")
+@patch("main.get_routes_collection")
+@pytest.mark.parametrize("invalid_data", [None, 0, ""])
+def test_update_route_invalid_active_status_fail(mock_routes_collection, mock_get_db, invalid_data):
+    route_id = "1"
+    
+    mock_route_doc = MagicMock()
+
+    # mock query
+    mock_query = MagicMock()
+    mock_query.where.return_value.stream.return_value = [mock_route_doc]
+    mock_routes_collection.return_value = mock_query
+
+    mock_route_doc_ref = MagicMock()
+    mock_collection = MagicMock()
+    mock_collection.return_value = mock_route_doc_ref
+
+    mock_db = MagicMock()
+    mock_db.collection.return_value = mock_collection
+    mock_get_db.return_value = mock_db
+
+    expected = (
+        json.dumps({
+            "message": "Bad Request",
+            "data": ""
+        }),
+        400,
+        {
+            "Content-Type": "application/json"
+        }
+    )
+
+    response = update_route(route_id, {"active": invalid_data})
+
+    assert response == expected
+
+# delete_route tests
+@patch("main.get_routes_collection")
+def test_delete_route_success(mock_routes_collection):
+    route_id = "1"
+    
+    mock_doc_ref = MagicMock()
+    mock_doc = MagicMock()
+    mock_doc.reference = mock_doc_ref
+
+    mock_query = MagicMock()
+    mock_query.where.return_value.stream.return_value = [mock_doc]
+    mock_routes_collection.return_value = mock_query
+
+    expected = (
+        json.dumps({
+            "message": "OK",
+            "data": ""
+        }),
+        200,
+        {
+            "Content-Type": "application/json"
+        }
+    )
+
+    response = delete_route(route_id)
+
+    assert response == expected
+
+@patch("main.get_routes_collection")
+@pytest.mark.parametrize("invalid_data", [0, None, ""])
+def test_delete_route_invalid_id_fail(mock_routes_collection, invalid_data):
+    mock_query = MagicMock()
+    mock_query.stream.return_value = []
+
+    mock_collection = MagicMock()
+    mock_collection.where.return_value = mock_query
+
+    mock_routes_collection.return_value = mock_collection
+    
+    expected = (
+        json.dumps({
+            "message": "Not Found",
+            "data": ""
+        }),
+        404,
+        {
+            "Content-Type": "application/json"
+        }
+    )
+
+    response = delete_route(invalid_data)
+
+    assert response == expected
