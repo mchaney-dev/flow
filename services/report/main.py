@@ -251,20 +251,24 @@ def get_report(report_id):
     docs = []
     
     try:
-        docs = list(query.where("id", "==", report_id).stream())
-        if not docs:
-            logging.error(f"Report with ID {report_id} not found")
+        if not isinstance(report_id, str) or report_id == "":
+            logging.error(f"Invalid report ID: {report_id}, must be string")
             return http_response(404)
-        # check if more than one report with the same ID exists
-        if len(docs) > 1:
-            logging.error(f"Multiple reports with ID {report_id} found")
-            return http_response(500)
+        else:
+            docs = list(query.where("id", "==", report_id).stream())
+            if not docs:
+                logging.error(f"Report with ID {report_id} not found")
+                return http_response(404)
+            # check if more than one report with the same ID exists
+            if len(docs) > 1:
+                logging.error(f"Multiple reports with ID {report_id} found")
+                return http_response(500)
         
-        data = {
-            "report": docs[0].to_dict()
-        }
+            data = {
+                "report": docs[0].to_dict()
+            }
 
-        return http_response(200, data)
+            return http_response(200, data)
     except Exception as e:
         logging.error(f"Internal server error: {e}")
         return http_response(500)
