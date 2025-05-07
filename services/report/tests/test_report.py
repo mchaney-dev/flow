@@ -225,14 +225,9 @@ def test_get_report_success(mock_reports_collection):
 @patch("main.get_reports_collection")
 @pytest.mark.parametrize("invalid_data", ["", 0, None])
 def test_get_report_invalid_id_fail(mock_reports_collection, invalid_data):
-    mock_query = MagicMock()
-    mock_query.stream.return_value = []
-
     mock_collection = MagicMock()
-    mock_collection.where.return_value = mock_query
-
     mock_reports_collection.return_value = mock_collection
-    
+
     expected = (
         json.dumps({
             "message": "Not Found",
