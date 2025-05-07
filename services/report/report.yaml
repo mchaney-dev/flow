@@ -142,40 +142,10 @@ paths:
           $ref: '#/components/responses/400Error'
         '500':
           $ref: '#/components/responses/500Error'
-
-    patch:
-      description: Update a report
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                type:
-                  $ref: '#/components/schemas/ReportType'
-                route:
-                  type: string
-                stop:
-                  type: string
-                timestamp:
-                  type: string
-                  format: date-time
       
       responses:
         '200': 
           description: Successfully updated report
-        '400':
-          $ref: '#/components/responses/400Error'
-        '500':
-          $ref: '#/components/responses/500Error'
-    
-    delete:
-      description: Delete a report
-
-      responses:
-        '200':
-          description: Successfully deleted report
         '400':
           $ref: '#/components/responses/400Error'
         '500':
