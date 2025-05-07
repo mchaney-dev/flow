@@ -57,11 +57,11 @@ paths:
   /routes/{id}:
     parameters:
       - name: id
-      description: The unique identifier of a route
-      in: path
-      required: true
-      schema:
-        type: string
+        description: The unique identifier of a route
+        in: path
+        required: true
+        schema:
+          type: string
 
     get:
       description: Get a route
@@ -142,7 +142,7 @@ components:
   ### Schemas ###
   schemas:
     Route:
-      description:
+      description: A public transit route tracked by Flow
       type: object
       required:
         - id

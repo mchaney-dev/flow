@@ -17,34 +17,34 @@ paths:
       parameters:
         # filter by report type
         - name: type
-        in: query
-        description: The type of report to retrieve
-        required: false
-        schema:
-          $ref: '#/components/schemas/ReportType'
+          in: query
+          description: The type of report to retrieve
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportType'
         # filter by date
         - name: date
-        in: query
-        description: The date the report was posted
-        required: false
-        schema:
-          type: string
-          format: date
+          in: query
+          description: The date the report was posted
+          required: false
+          schema:
+            type: string
+            format: date
         # filter by time
         - name: time
-        in: query
-        description: The time the report was posted
-        required: false
-        schema:
-          type: string
-          format: time
+          in: query
+          description: The time the report was posted
+          required: false
+          schema:
+            type: string
+            format: time
         # filter by route
         - name: route
-        in: query
-        description: The route the report was posted about
-        required: false
-        schema:
-          type: string
+          in: query
+          description: The route the report was posted about
+          required: false
+          schema:
+            type: string
       
       responses:
         '200':
@@ -65,34 +65,34 @@ paths:
       parameters:
         # filter by report type
         - name: type
-        in: query
-        description: The type of report to delete
-        required: false
-        schema:
-          $ref: '#/components/schemas/ReportType'
+          in: query
+          description: The type of report to delete
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportType'
         # filter by date
         - name: date
-        in: query
-        description: The date the report was posted
-        required: false
-        schema:
-          type: string
-          format: date
+          in: query
+          description: The date the report was posted
+          required: false
+          schema:
+            type: string
+            format: date
         # filter by time
         - name: time
-        in: query
-        description: The time the report was posted
-        required: false
-        schema:
-          type: string
-          format: time
+          in: query
+          description: The time the report was posted
+          required: false
+          schema:
+            type: string
+            format: time
         # filter by route
         - name: route
-        in: query
-        description: The route the report was posted about
-        required: false
-        schema:
-          type: string
+          in: query
+          description: The route the report was posted about
+          required: false
+          schema:
+            type: string
 
       responses:
         '200':
@@ -122,11 +122,11 @@ paths:
   /reports/{id}:
     parameters:
       - name: id
-      description: The unique identifier of a report
-      in: path
-      required: true
-      schema:
-        type: string
+        description: The unique identifier of a report
+        in: path
+        required: true
+        schema:
+          type: string
     
     get:
       description: Get a report by id
@@ -152,7 +152,15 @@ paths:
             schema:
               type: object
               properties:
-                # properties
+                type:
+                  $ref: '#/components/schemas/ReportType'
+                route:
+                  type: string
+                stop:
+                  type: string
+                timestamp:
+                  type: string
+                  format: date-time
       
       responses:
         '200': 
