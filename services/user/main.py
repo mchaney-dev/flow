@@ -93,7 +93,7 @@ def request_handler(request):
                         return get_user(user_id)
                     # update a user account
                     case "PATCH":
-                        return update_user(user_id)
+                        return update_user(user_id, data)
                     # delete a user account
                     case "DELETE":
                         return delete_user(user_id)
@@ -101,7 +101,17 @@ def request_handler(request):
                     case _:
                         logging.error(f"Invalid request method: {request.method}")
                         return http_response(405)
-            # handle invalid endpoint
+            # /users/{id}/password, endpoint for password management
+            case ["users", user_id, "password"]:
+                match request.method:
+                    # update a user's password
+                    case "PATCH":
+                        logging.debug("Calling update_password")
+                        return update_password(user_id, data)
+                    # handle invalid request method
+                    case _:
+                        logging.error(f"Invalid request method: {request.method}")
+                        return http_response(405)
             case _:
                 logging.error(f"Invalid resource: {request.path}")
                 return http_response(404)
@@ -345,7 +355,10 @@ def get_user(user_id):
         if len(docs) > 1:
             logging.error(f"Multiple users with ID {user_id} found")
             return http_response(500)
-        data = docs[0].to_dict()
+        
+        data = {
+            "user": docs[0].to_dict(),
+        }
 
         return http_response(200, data)
     except Exception as e:
@@ -361,15 +374,25 @@ def update_user(user_id, data):
 
         updates = {}
 
+        if not isinstance(user_id, str) or user_id == "":
+            logging.error(f"Invalid user ID: {user_id}, must be string")
+            return http_response(404)
+        
         if "email" in data.keys():
+            if not isinstance(data["email"], str):
+                logging.error(f"Invalid email: {data['email']}, must be string")
+                return http_response(400)
             # normalize email
             email = data["email"].strip().lower()
-
             # invalid email
             if re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email) is None:
                 logging.error(f"Invalid email: {email}")
                 return http_response(400)
             updates.update({"email": email})
+        
+        if "password" in data.keys():
+            logging.error(f"Password passed in to /users/id, use /users/password instead")
+            return http_response(400)
         
         if "type" in data.keys():
             # invalid type
@@ -378,23 +401,23 @@ def update_user(user_id, data):
                 return http_response(400)
             updates.update({"type": data["type"]})
 
-        docs = list(query.where("id", "==", user_id).stream())
-        if not docs:
+        query_result = query.where("id", "==", user_id).limit(1).stream()
+        doc = next(iter(query_result), None)
+
+        if not doc:
             logging.error(f"User with ID {user_id} not found")
             return http_response(404)
-        if len(docs) > 1:
-            logging.error(f"Multiple users with ID {user_id} found")
-            return http_response(500)
+        
+        user_data = doc.to_dict()
 
         # update user
-        user_ref = db.collection("users").document(docs[0].id)
+        user_ref = db.collection("users").document(doc.id)
         user_ref.update(updates)
 
         return http_response(200)
     except Exception as e:
         logging.error(f"Internal server error: {e}")
         return http_response(500)
-
 
 # DELETE /users/{id}
 def delete_user(user_id):
@@ -414,6 +437,63 @@ def delete_user(user_id):
 
         doc = docs[0]
         doc.reference.delete()
+
+        return http_response(200)
+    except Exception as e:
+        logging.error(f"Internal server error: {e}")
+        return http_response(500)
+
+# PATCH /users/{id}/password
+def update_password(user_id, data):
+    try:
+        users = get_users_collection()
+        db = get_db()
+        query = users
+
+        if not isinstance(user_id, str) or user_id == "":
+            logging.error(f"Invalid user ID: {user_id}, must be string")
+            return http_response(404)
+
+        if "prevPassword" not in data or "newPassword" not in data:
+            logging.error("Missing required password fields")
+            return http_response(400)
+        
+        if not isinstance(data["prevPassword"], str) or not isinstance(data["newPassword"], str):
+            logging.error("Password fields must contain strings")
+            return http_response(400)
+
+        prev_password = data["prevPassword"]
+        new_password = data["newPassword"]
+
+        # validate password formats
+        pw_regex = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$"
+        if not re.match(pw_regex, prev_password) or not re.match(pw_regex, new_password):
+            logging.error("Invalid password format")
+            return http_response(400)
+
+        if prev_password == new_password:
+            logging.error("New password cannot match previous password")
+            return http_response(400)
+
+        # get user doc by ID
+        query_result = query.where("id", "==", user_id).limit(1).stream()
+        doc = next(iter(query_result), None)
+        if not doc:
+            logging.error(f"User with ID {user_id} not found")
+            return http_response(404)
+
+        user_data = doc.to_dict()
+        stored_hashed_pw = user_data.get("password")
+
+        if not stored_hashed_pw or not bcrypt.checkpw(prev_password.encode("utf-8"), stored_hashed_pw.encode("utf-8")):
+            logging.error("Previous password does not match stored password")
+            return http_response(401)
+
+        new_hashed_pw = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+        # update password
+        user_ref = db.collection("users").document(doc.id)
+        user_ref.update({"password": new_hashed_pw})
 
         return http_response(200)
     except Exception as e:
