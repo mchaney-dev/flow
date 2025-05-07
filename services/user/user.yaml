@@ -166,6 +166,36 @@ paths:
         '500':
           $ref: '#/components/responses/500Error'
 
+  # endpoint for individual users to manage their password
+  /users/{id}/password:
+    parameters:
+      - name: id
+        description: The unique identifier of a user account
+        in: path
+        required: true
+        schema:
+          type: string
+
+    patch:
+      description: Update a user's password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                AccountCredentials:
+                  $ref: '#/components/schemas/PaswordChange'
+      
+      responses:
+        '200':
+          description: Successfully updated password
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
 ### Components ###
 components:
 
@@ -204,6 +234,18 @@ components:
           $ref: '#/components/schemas/AccountCredentials'
         AccountType:
           $ref: '#/components/schemas/AccountType'
+
+      PasswordChange:
+        description: An object used to change a Flow user's password
+        type: object
+        required:
+          - prevPassword
+          - newPassword
+        properties:
+          prevPassword:
+            type: string
+          newPassword:
+            type: string
 
   ### Responses ###
   responses:
