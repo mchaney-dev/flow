@@ -142,14 +142,6 @@ paths:
           $ref: '#/components/responses/400Error'
         '500':
           $ref: '#/components/responses/500Error'
-      
-      responses:
-        '200': 
-          description: Successfully updated report
-        '400':
-          $ref: '#/components/responses/400Error'
-        '500':
-          $ref: '#/components/responses/500Error'
 
 ### Components ###
 components:
