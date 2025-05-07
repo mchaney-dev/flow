@@ -7,26 +7,118 @@ info:
 
 ### Server ###
 servers:
-  - url: placeholder
+  - url: 'https://www.example.com'
 
 ### Endpoints ###
 paths:
-  # admin-only
   /maps:
     get:
       description: Get all maps
+
+      responses:
+        '200':
+          description: Successfully retrieved maps
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Map'
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+    
     delete:
       description: Delete all maps
 
-  # admin-only
-  /maps/new:
+      responses:
+        '200':
+          description: Successfully deleted maps
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
     post:
-      description: Create a map
+      description: Post a map
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Map'
+      
+      responses:
+        '200':
+          description: Successfully posted map
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
   
   /maps/{id}:
+    parameters:
+      - name: id
+        description: The unique identifier of a map
+        in: path
+        required: true
+        schema:
+          type: string
+    
     get:
-      description: Get a map
-    patch:
-      description: Update a map
-    delete:
-      description: Delete a map
+      description: Get a map by id
+
+      responses:
+        '200':
+          description: Successfully retrieved map
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Map'
+        '400':
+          $ref: '#/components/responses/400Error'
+        '500':
+          $ref: '#/components/responses/500Error'
+
+### Components ###
+components:
+
+  ### Schemas ###
+  schemas:
+
+    Map:
+      description: A map uploaded to Flow
+      type: object
+      required:
+        - id
+        - url
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+
+  ### Responses ###
+  responses:
+    400Error:
+      description: Invalid client request.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                description: A human-readable error message
+                type: string
+
+    500Error:
+      description: The server encountered an error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                description: A human-readable error message
+                type: string

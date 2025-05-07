@@ -17,34 +17,34 @@ paths:
       parameters:
         # filter by report type
         - name: type
-        in: query
-        description: The type of report to retrieve
-        required: false
-        schema:
-          $ref: '#/components/schemas/ReportType'
+          in: query
+          description: The type of report to retrieve
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportType'
         # filter by date
         - name: date
-        in: query
-        description: The date the report was posted
-        required: false
-        schema:
-          type: string
-          format: date
+          in: query
+          description: The date the report was posted
+          required: false
+          schema:
+            type: string
+            format: date
         # filter by time
         - name: time
-        in: query
-        description: The time the report was posted
-        required: false
-        schema:
-          type: string
-          format: time
+          in: query
+          description: The time the report was posted
+          required: false
+          schema:
+            type: string
+            format: time
         # filter by route
         - name: route
-        in: query
-        description: The route the report was posted about
-        required: false
-        schema:
-          type: string
+          in: query
+          description: The route the report was posted about
+          required: false
+          schema:
+            type: string
       
       responses:
         '200':
@@ -65,34 +65,34 @@ paths:
       parameters:
         # filter by report type
         - name: type
-        in: query
-        description: The type of report to delete
-        required: false
-        schema:
-          $ref: '#/components/schemas/ReportType'
+          in: query
+          description: The type of report to delete
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportType'
         # filter by date
         - name: date
-        in: query
-        description: The date the report was posted
-        required: false
-        schema:
-          type: string
-          format: date
+          in: query
+          description: The date the report was posted
+          required: false
+          schema:
+            type: string
+            format: date
         # filter by time
         - name: time
-        in: query
-        description: The time the report was posted
-        required: false
-        schema:
-          type: string
-          format: time
+          in: query
+          description: The time the report was posted
+          required: false
+          schema:
+            type: string
+            format: time
         # filter by route
         - name: route
-        in: query
-        description: The route the report was posted about
-        required: false
-        schema:
-          type: string
+          in: query
+          description: The route the report was posted about
+          required: false
+          schema:
+            type: string
 
       responses:
         '200':
@@ -122,11 +122,11 @@ paths:
   /reports/{id}:
     parameters:
       - name: id
-      description: The unique identifier of a report
-      in: path
-      required: true
-      schema:
-        type: string
+        description: The unique identifier of a report
+        in: path
+        required: true
+        schema:
+          type: string
     
     get:
       description: Get a report by id
@@ -138,36 +138,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Report'
-        '400':
-          $ref: '#/components/responses/400Error'
-        '500':
-          $ref: '#/components/responses/500Error'
-
-    patch:
-      description: Update a report
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                # properties
-      
-      responses:
-        '200': 
-          description: Successfully updated report
-        '400':
-          $ref: '#/components/responses/400Error'
-        '500':
-          $ref: '#/components/responses/500Error'
-    
-    delete:
-      description: Delete a report
-
-      responses:
-        '200':
-          description: Successfully deleted report
         '400':
           $ref: '#/components/responses/400Error'
         '500':
