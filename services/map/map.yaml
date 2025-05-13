@@ -7,7 +7,7 @@ info:
 
 ### Server ###
 servers:
-  - url: 'https://www.example.com'
+  - url: ''
 
 ### Endpoints ###
 paths:
