@@ -1,7 +1,13 @@
-from google.cloud import firestore
-import json
-import logging
-import re
+### DEVELOPMENT ###
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+
+from common import logging
+from common import configure_logging, get_db, get_collection, http_response, process_params
+from common import is_valid_email, is_valid_password
+### DEVELOPMENT ###
 
 STATUS = {
     200: "OK",
