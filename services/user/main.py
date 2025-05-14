@@ -133,7 +133,7 @@ def get_users(query_params: dict = None):
         # process any query parameters
         if query_params:
             # filter - account type
-            if query_params.get("type"):
+            if "type" in query_params:
                 # account for invalid type
                 if not isinstance(query_params["type"], str) or query_params["type"] not in user_types:
                     return http_response(
@@ -145,7 +145,7 @@ def get_users(query_params: dict = None):
                     query = query.where("type", "==", query_params["type"])
 
             # filter - pagination limit
-            if query_params.get("limit"):
+            if "limit" in query_params:
                 # account for invalid limit
                 if isinstance(query_params["limit"], str) and int(query_params["limit"]) > 0:
                     query = query.limit(int(query_params["limit"]))
@@ -157,12 +157,13 @@ def get_users(query_params: dict = None):
                     )
             
             # filter - pagination start_after
-            if query_params.get("start_after"):
+            if "start_after" in query_params:
                 # account for invalid start_after ID
-                if isinstance(query_params["start_after"], str) and int(query_params["start_after"]) >= 0:
+                decoded_id = int(base64.urlsafe_b64decode(query_params["start_after"].encode()).decode())
+                if isinstance(query_params["start_after"], str) and decoded_id >= 0:
                     doc_id = query_params["start_after"]
                     # set the query start_after id
-                    doc_id = base64.urlsafe_b64decode(doc_id.encode()).decode()
+                    doc_id = decoded_id
                     last_doc = users.document(doc_id).get()
                     if last_doc.exists:
                         query = query.start_after(last_doc)
@@ -210,7 +211,7 @@ def delete_users(query_params: dict = None):
 
         if query_params:
             # filter - account type
-            if query_params.get("type"):
+            if "type" in query_params:
                 if isinstance(query_params["type"], str) and "type" in user_types:
                     query = query.where("type", "==", query_params["type"])
                 else:
@@ -257,17 +258,17 @@ def register_user(data: dict):
         query = users
 
         # account for missing fields
-        if not data.get("email"):
+        if "email" not in data:
             return http_response(
                 400,
                 f"Missing required field 'email' in request body"
             )
-        if not data.get("password"):
+        if "password" not in data:
             return http_response(
                 400,
                 f"Missing required field 'password' in request body"
             )
-        if not data.get("type"):
+        if "type" not in data:
             return http_response(
                 400,
                 f"Missing required field 'type' in request body"
@@ -306,7 +307,7 @@ def register_user(data: dict):
         if not isinstance(data["type"], str) or data["type"] not in user_types:
             return http_response(
                 400,
-                f"Invalid user type: {data.get('type')} ({type(data['type'])}), " +
+                f"Invalid field 'type': {data.get('type')} ({type(data['type'])}), " +
                 f"must be of type 'string' and one of the following: {user_types}"
             )
 
@@ -331,12 +332,12 @@ def login_user(data: dict):
         query = users
 
         # account for missing fields
-        if not data.get("email"):
+        if "email" not in data:
             http_response(
                 400,
                 f"Missing required field 'email' in request body"
             )
-        if not data.get("password"):
+        if "password" not in data:
             http_response(
                 400,
                 f"Missing required field 'password' in request body"
@@ -394,7 +395,13 @@ def get_user(user_id: str):
         users = get_collection("users")
         query = users
 
-        # account for missing fields
+        # account for missing id
+        if user_id == None:
+            return http_response(
+                400,
+                f"Invalid field 'user_id'"
+            )
+        
         # invalid id
         if user_id == "":
             return http_response(
@@ -433,6 +440,13 @@ def update_user(user_id: str, data: dict):
 
         updates = {}
 
+        # account for missing id
+        if user_id == None:
+            return http_response(
+                400,
+                f"Invalid field 'user_id'"
+            )
+        
         # account for invalid user_id
         if user_id == "":
             return http_response(
@@ -440,7 +454,7 @@ def update_user(user_id: str, data: dict):
                 f"Required field 'user_id' must not be empty string"
             )
         
-        if "email" in data.keys():
+        if "email" in data:
             # account for invalid email
             if not is_valid_email(data["email"]):
                 return http_response(
@@ -459,12 +473,12 @@ def update_user(user_id: str, data: dict):
                 )
             updates.update({"email": email})
         
-        if "type" in data.keys():
+        if "type" in data:
             # account for invalid type
             if not isinstance(data["type"], str) or data["type"] not in user_types:
                 return http_response(
                     400,
-                    f"Invalid user type: {data.get('type')} ({type(data['type'])}), " +
+                    f"Invalid field 'type': {data.get('type')} ({type(data['type'])}), " +
                     f"must be of type 'string' and one of the following: {user_types}"
                 )
         updates.update({"type": data["type"]})
@@ -475,7 +489,7 @@ def update_user(user_id: str, data: dict):
         if not doc:
             return http_response(
                 404,
-                f"User with ID {user_id} not found"
+                f"Invalid field 'user_id': user with ID {user_id} not found"
             )
 
         # update user
@@ -495,6 +509,13 @@ def delete_user(user_id: str):
         users = get_collection("users")
         query = users
 
+        # account for missing id
+        if user_id == None:
+            return http_response(
+                400,
+                f"Invalid field 'user_id'"
+            )
+        
         # account for invalid user_id
         if user_id == "":
             return http_response(
@@ -508,7 +529,7 @@ def delete_user(user_id: str):
         if not doc:
             return http_response(
                 404,
-                f"User with ID {user_id} not found"
+                f"Invalid field 'user_id': User with ID {user_id} not found"
             )
 
         # delete user
@@ -528,6 +549,13 @@ def update_password(user_id: str, data: dict):
         db = get_db()
         query = users
 
+        # account for missing id
+        if user_id == None:
+            return http_response(
+                400,
+                f"Invalid field 'user_id'"
+            )
+        
         # account for invalid user_id
         if user_id == "":
             return http_response(
@@ -536,12 +564,12 @@ def update_password(user_id: str, data: dict):
             )
 
         # account for missing fields
-        if not data.get("prevPassword"):
+        if "prevPassword" not in data:
             http_response(
                 400,
                 f"Missing required field 'prevPassword' in request body"
             )
-        if not data.get("newPassword"):
+        if "newPassword" not in data:
             http_response(
                 400,
                 f"Missing required field 'newPassword' in request body"
@@ -549,7 +577,7 @@ def update_password(user_id: str, data: dict):
         
         # account for invalid fields
         # invalid prevPassword
-        if not is_valid_password(data["prevPassword"]):
+        if not isinstance(data["prevPassword"], str) or not is_valid_password(data["prevPassword"]):
             return http_response(
                 400,
                 f"Invalid field 'prevPassword': {data['prevPassword']}"
@@ -558,7 +586,7 @@ def update_password(user_id: str, data: dict):
             prev_password = is_valid_password(data["prevPassword"])
         
         # invalid newPassword
-        if not is_valid_password(data["newPassword"]):
+        if not isinstance(data["newPassword"], str) or not is_valid_password(data["newPassword"]):
             return http_response(
                 400,
                 f"Invalid field 'newPassword': {data['newPassword']}"
@@ -579,7 +607,7 @@ def update_password(user_id: str, data: dict):
         if not doc:
             return http_response(
                 404,
-                f"User with ID {user_id} not found"
+                f"Invalid field 'user_id': User with ID {user_id} not found"
             )
         user_data = doc.to_dict()
 

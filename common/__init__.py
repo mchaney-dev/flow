@@ -99,7 +99,7 @@ def process_params(request_data) -> tuple:
 
 def is_valid_email(email: str):
     try:
-        if email == "":
+        if email == "" or email == None:
             return False
         # normalize email
         email = email.strip().lower()
@@ -112,7 +112,7 @@ def is_valid_email(email: str):
 
 def is_valid_password(password: str):
     try:
-        if password == "":
+        if password == "" or password == None:
             return False
         if re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$", password) is None:
             return False
