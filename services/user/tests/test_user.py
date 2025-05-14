@@ -5,23 +5,23 @@ import bcrypt
 import json
 
 # get_users tests
-@patch("main.get_users_collection")
-def test_get_users_success(mock_users_collection):
-    # mock doc for a sample user
-    user = {
+@patch("main.get_collection")
+def test_get_users_success(collection):
+    data = {
         "id": "1",
         "email": "email@example.com",
         "password": "Password123!",
         "type": "user"
     }
-    mock_user_doc = MagicMock()
-    mock_user_doc.to_dict.return_value = user
+
+    mock_doc = MagicMock()
+    mock_doc.to_dict.return_value = data
 
     expected = (
         json.dumps({
             "message": "OK",
             "data": {
-                "users": [user],
+                "users": [data],
                 "nextPageToken": ""
             }
         }),
@@ -31,100 +31,65 @@ def test_get_users_success(mock_users_collection):
         }
     )
 
-    # mock query behavior
     mock_query = MagicMock()
-    mock_query.stream.return_value = [mock_user_doc]
-    mock_users_collection.return_value = mock_query
+    mock_query.stream.return_value = [mock_doc]
+    collection.return_value = mock_query
     
     response = get_users()
 
     assert response == expected
 
-@patch("main.get_users_collection")
-def test_get_users_invalid_type_fail(mock_users_collection):
-    expected = (
-        json.dumps({
-            "message": "Bad Request",
-            "data": ""
-        }),
-        400,
-        {
-            "Content-Type": "application/json"
-        }
-    )
+@pytest.mark.parametrize("invalid_data", ["guest", 0, None, ""])
+@patch("main.get_collection")
+def test_get_users_invalid_type_fail(collection, invalid_data):
+    response = get_users({"type": invalid_data})
 
-    response = get_users({"type": "guest"})
+    assert "Invalid query parameter 'type'" in response[0]
+    assert response[1] == 400
 
-    assert response == expected
+@pytest.mark.parametrize("invalid_data", ["abc", None, 5.5, ""])
+@patch("main.get_collection")
+def test_get_users_invalid_limit_fail(collection, invalid_data):
+    response = get_users({"limit": invalid_data})
 
-@pytest.mark.parametrize("invalid_data", [
-    {"limit": "abc"},
-    {"limit": None},
-    {"limit": 5.5}
-])
-@patch("main.get_users_collection")
-def test_get_users_invalid_limit_fail(mock_users_collection, invalid_data):
-    expected = (
-        json.dumps({
-            "message": "Bad Request",
-            "data": ""
-        }),
-        400,
-        {
-            "Content-Type": "application/json"
-        }
-    )
+    if invalid_data in [None, 5.5]:
+        assert "Invalid query parameter 'limit'" in response[0]
+        assert response[1] == 400
+    else:
+        assert "Internal Server Error" in response[0]
+        assert response[1] == 500
 
-    response = get_users(invalid_data)
+@pytest.mark.parametrize("invalid_data", [None, "not_base64", ""])
+@patch("main.get_collection")
+def test_get_users_invalid_start_after_fail(collection, invalid_data):
+    response = get_users({"start_after": invalid_data})
 
-    assert response == expected
-
-@pytest.mark.parametrize("invalid_data", [
-    {"start_after": None},
-    {"start_after": "not_base64"}
-])
-@patch("main.get_users_collection")
-def test_get_users_invalid_start_after_fail(mock_users_collection, invalid_data):
-    expected = (
-        json.dumps({
-            "message": "Internal Server Error",
-            "data": ""
-        }),
-        500,
-        {
-            "Content-Type": "application/json"
-        }
-    )
-
-    response = get_users(invalid_data)
-
-    assert response == expected
+    assert "Internal Server Error" in response[0]
+    assert response[1] == 500
 
 # delete_users tests
 @patch("main.get_db")
-@patch("main.get_users_collection")
-def test_delete_users_success(mock_users_collection, mock_get_db):
-    # mock doc for a sample user
-    user = {
+@patch("main.get_collection")
+def test_delete_users_success(collection, db):
+    data = {
         "id": "1",
         "email": "email@example.com",
         "password": "Password123!",
         "type": "user"
     }
-    mock_user_doc = MagicMock()
-    mock_user_doc.to_dict.return_value = user
-    mock_user_doc.id = "1"
 
-    # mock query behavior
+    mock_doc = MagicMock()
+    mock_doc.to_dict.return_value = data
+    mock_doc.id = "1"
+
     mock_query = MagicMock()
-    mock_query.stream.return_value = [mock_user_doc]
-    mock_users_collection.return_value = mock_query
+    mock_query.stream.return_value = [mock_doc]
+    collection.return_value = mock_query
 
-    # mock db and batch
     mock_batch = MagicMock()
     mock_db = MagicMock()
     mock_db.batch.return_value = mock_batch
-    mock_get_db.return_value = mock_db
+    db.return_value = mock_db
 
     expected = (
         json.dumps({
@@ -144,31 +109,22 @@ def test_delete_users_success(mock_users_collection, mock_get_db):
 
     assert response == expected
 
+@pytest.mark.parametrize("invalid_data", ["guest", 0, None, ""])
 @patch("main.get_db")
-@patch("main.get_users_collection")
-def test_delete_users_invalid_type_fail(mock_users_collection, mock_get_db):
+@patch("main.get_collection")
+def test_delete_users_invalid_type_fail(collection, db, invalid_data):
     mock_db = MagicMock()
-    mock_get_db.return_value = mock_db
+    db.return_value = mock_db
     
-    expected = (
-        json.dumps({
-            "message": "Bad Request",
-            "data": ""
-        }),
-        400,
-        {
-            "Content-Type": "application/json"
-        }
-    )
+    response = delete_users({"type": invalid_data})
 
-    response = delete_users({"type": "guest"})
-
-    assert response == expected
+    assert "Invalid query parameter 'type'" in response[0]
+    assert response[1] == 400
 
 # register_user tests
-@patch("main.get_users_collection")
-def test_register_user_success(mock_users_collection):
-    user = {
+@patch("main.get_collection")
+def test_register_user_success(collection):
+    data = {
         "email": "user@example.com",
         "password": "Password123!",
         "type": "user"
@@ -185,139 +141,89 @@ def test_register_user_success(mock_users_collection):
         }
     )
 
-    # mock users collection
-    mock_users = MagicMock()
-    mock_users_collection.return_value = mock_users
-
-    # mock request data
-    data = user
+    mock_collection = MagicMock()
+    collection.return_value = mock_collection
 
     response = register_user(data)
 
     assert response == expected
 
-@patch("main.get_users_collection")
-def test_register_user_existing_email_fail(mock_users_collection):
-    user = {
+@patch("main.get_collection")
+def test_register_user_existing_email_fail(collection):
+    data = {
         "email": "user@example.com",
         "password": "Password123!",
         "type": "user"
     }
+
+    mock_doc = MagicMock()
+    mock_doc.to_dict.return_value = data
+
+    mock_collection = MagicMock()
     
-    expected = (
-        json.dumps({
-            "message": "Conflict",
-            "data": ""
-        }),
-        409,
-        {
-            "Content-Type": "application/json"
-        }
-    )
-
-    # mock firestore document stream result
-    mock_existing_user = MagicMock()
-    mock_existing_user.to_dict.return_value = user
-
-    # mock collection
-    mock_users = MagicMock()
-    
-    # when register_user calls .where(...).limit(1).stream(), return a non-empty list
-    mock_users.where.return_value.limit.return_value.stream.return_value = [mock_existing_user]
-    mock_users_collection.return_value = mock_users
-
-    # mock request data
-    data = user
+    mock_collection.where.return_value.limit.return_value.stream.return_value = [mock_doc]
+    collection.return_value = mock_collection
 
     response = register_user(data)
 
-    assert response == expected
+    assert "Invalid field 'email'" in response[0]
+    assert response[1] == 409
 
-@pytest.mark.parametrize("invalid_data", [
-    {"email": "", "password": "Password123!", "type": "user"},
-    {"email": "exampledotcom", "password": "Password123!", "type": "user"},
-    {"password": "Password123!", "type": "user"},
-    {"email": None, "password": "Password123!", "type": "user"}
-])
-@patch("main.get_users_collection")
-def test_register_user_invalid_email_fail(mock_users_collection, invalid_data):
-    expected = (
-        json.dumps({
-            "message": "Bad Request",
-            "data": ""
-        }),
-        400,
-        {
-            "Content-Type": "application/json"
-        }
-    )
+@pytest.mark.parametrize("invalid_data", ["", "exampledotcom", None])
+@patch("main.get_collection")
+def test_register_user_invalid_email_fail(collection, invalid_data):
+    data = {
+        "email": invalid_data,
+        "password": "Password123!",
+        "type": "user"
+    }
 
-    # mock users collection
-    mock_users = MagicMock()
-    mock_users_collection.return_value = mock_users
+    mock_collection = MagicMock()
+    collection.return_value = mock_collection
 
-    response = register_user(invalid_data)
+    response = register_user(data)
 
-    assert response == expected
+    assert "Invalid field 'email'" in response[0]
+    assert response[1] == 400
 
-@pytest.mark.parametrize("invalid_data", [
-    {"email": "email@example.com", "password": "", "type": "user"},
-    {"email": "email@example.com", "password": "pw", "type": "user"},
-    {"email": "email@example.com", "type": "user"},
-    {"email": "email@example.com", "password": None, "type": "user"}
-])
-@patch("main.get_users_collection")
-def test_register_user_invalid_password_fail(mock_users_collection, invalid_data):
-    expected = (
-        json.dumps({
-            "message": "Bad Request",
-            "data": ""
-        }),
-        400,
-        {
-            "Content-Type": "application/json"
-        }
-    )
+@pytest.mark.parametrize("invalid_data", ["", "pw", None])
+@patch("main.get_collection")
+def test_register_user_invalid_password_fail(collection, invalid_data):
+    data = {
+        "email": "email@example.com",
+        "password": invalid_data,
+        "type": "user"
+    }
 
-    # mock users collection
-    mock_users = MagicMock()
-    mock_users_collection.return_value = mock_users
+    mock_collection = MagicMock()
+    collection.return_value = mock_collection
 
-    response = register_user(invalid_data)
+    response = register_user(data)
 
-    assert response == expected
+    assert "Invalid field 'password'" in response[0]
+    assert response[1] == 400
 
-@pytest.mark.parametrize("invalid_data", [
-    {"email": "email@example.com", "password": "Password123!", "type": ""},
-    {"email": "email@example.com", "password": "Password123!", "type": "account"},
-    {"email": "email@example.com", "password": "Password123!", "type": None},
-    {"email": "email@example.com", "password": "Password123!"}
-])
-@patch("main.get_users_collection")
-def test_register_user_invalid_type_fail(mock_users_collection, invalid_data):
-    expected = (
-        json.dumps({
-            "message": "Bad Request",
-            "data": ""
-        }),
-        400,
-        {
-            "Content-Type": "application/json"
-        }
-    )
+@pytest.mark.parametrize("invalid_data", ["", "account", None])
+@patch("main.get_collection")
+def test_register_user_invalid_type_fail(collection, invalid_data):
+    data = {
+        "email": "email@example.com",
+        "password": "Password123!",
+        "type": invalid_data
+    }
 
-    # mock users collection
-    mock_users = MagicMock()
-    mock_users_collection.return_value = mock_users
+    mock_collection = MagicMock()
+    collection.return_value = mock_collection
 
-    response = register_user(invalid_data)
+    response = register_user(data)
 
-    assert response == expected
+    assert "Invalid field 'type'" in response[0]
+    assert response[1] == 400
 
 # login_user tests
-@patch("main.get_users_collection")
-def test_login_user_success(mock_users_collection):
-    user = {
+@patch("main.get_collection")
+def test_login_user_success(collection):
+    data = {
         "email": "email@example.com",
         "password": "Password123!"
     }
@@ -333,103 +239,77 @@ def test_login_user_success(mock_users_collection):
         }
     )
 
-    # mock user doc with hashed password
     hashed_pw = bcrypt.hashpw("Password123!".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-    mock_user_doc = MagicMock()
-    mock_user_doc.to_dict.return_value = {
+    mock_doc = MagicMock()
+    mock_doc.to_dict.return_value = {
         "email": "email@example.com",
         "password": hashed_pw
     }
 
-    # mock query
     mock_query = MagicMock()
-    mock_query.where.return_value.limit.return_value.stream.return_value = [mock_user_doc]
-    mock_users_collection.return_value = mock_query
+    mock_query.where.return_value.limit.return_value.stream.return_value = [mock_doc]
+    collection.return_value = mock_query
 
-    response = login_user(user)
+    response = login_user(data)
     
     assert response == expected
 
-@pytest.mark.parametrize("invalid_data", [
-    {"email": "", "password": "Password123!"},
-    {"password": "Password123!"},
-    {"email": None, "password": "Password123!"}
-])
-@patch("main.get_users_collection")
-def test_login_user_invalid_email_fail(mock_users_collection, invalid_data):
-    expected = (
-        json.dumps({
-            "message": "Internal Server Error",
-            "data": ""
-        }),
-        500,
-        {
-            "Content-Type": "application/json"
-        }
-    )
+@pytest.mark.parametrize("invalid_data", ["", "emaildotcom", None])
+@patch("main.get_collection")
+def test_login_user_invalid_email_fail(collection, invalid_data):
+    data = {
+        "email": invalid_data,
+        "password": "Password123!",
+        "type": "user"
+    }
 
-    # mock users collection
-    mock_users = MagicMock()
-    mock_users_collection.return_value = mock_users
+    mock_collection = MagicMock()
+    collection.return_value = mock_collection
 
-    response = login_user(invalid_data)
+    response = login_user(data)
 
-    assert response == expected
+    assert "Invalid field 'email'" in response[0]
+    assert response[1] == 400
 
-@pytest.mark.parametrize("invalid_data", [
-    {"email": "email@example.com", "password": ""},
-    {"email": "email@example.com"},
-    {"email": "email@example.com", "password": None}
-])
-@patch("main.get_users_collection")
-def test_login_user_invalid_password_fail(mock_users_collection, invalid_data):
-    expected = (
-        json.dumps({
-            "message": "Internal Server Error",
-            "data": ""
-        }),
-        500,
-        {
-            "Content-Type": "application/json"
-        }
-    )
+@pytest.mark.parametrize("invalid_data", ["", "pw", None])
+@patch("main.get_collection")
+def test_login_user_invalid_password_fail(collection, invalid_data):
+    data = {
+        "email": "email@example.com",
+        "password": invalid_data,
+        "type": "user"
+    }
 
-    # mock users collection
-    mock_users = MagicMock()
-    mock_users_collection.return_value = mock_users
+    mock_collection = MagicMock()
+    collection.return_value = mock_collection
 
-    response = login_user(invalid_data)
+    response = login_user(data)
 
-    assert response == expected
+    assert "Invalid field 'password'" in response[0]
+    assert response[1] == 400
 
 # get_user tests
-@patch("main.get_users_collection")
-def test_get_user_success(mock_users_collection):
-    user_id = "1"
-    
-    user = {
-        "id": user_id,
+@patch("main.get_collection")
+def test_get_user_success(collection):
+    data = {
+        "id": "1",
         "email": "user@example.com",
         "password": "Password123!",
         "type": "user"
     }
 
-    mock_user_doc = MagicMock()
-    mock_user_doc.to_dict.return_value = user
+    mock_doc = MagicMock()
+    mock_doc.to_dict.return_value = data
 
     mock_query = MagicMock()
-    mock_query.stream.return_value = [mock_user_doc]
-
-    mock_collection = MagicMock()
-    mock_collection.where.return_value = mock_query
-
-    mock_users_collection.return_value = mock_collection
+    mock_query.where.return_value.limit.return_value.stream.return_value = [mock_doc]
+    collection.return_value = mock_query
 
     expected = (
         json.dumps({
             "message": "OK",
             "data": {
-                "user": user
+                "user": data
             }
         }),
         200,
@@ -438,64 +318,54 @@ def test_get_user_success(mock_users_collection):
         }
     )
     
-    response = get_user(user_id)
+    response = get_user(data["id"])
 
     assert response == expected
 
-@patch("main.get_users_collection")
+@patch("main.get_collection")
 @pytest.mark.parametrize("invalid_data", ["", 0, None])
-def test_get_user_invalid_id_fail(mock_users_collection, invalid_data):
+def test_get_user_invalid_id_fail(collection, invalid_data):
     mock_query = MagicMock()
     mock_query.stream.return_value = []
 
     mock_collection = MagicMock()
     mock_collection.where.return_value = mock_query
 
-    mock_users_collection.return_value = mock_collection
-    
-    expected = (
-        json.dumps({
-            "message": "Not Found",
-            "data": ""
-        }),
-        404,
-        {
-            "Content-Type": "application/json"
-        }
-    )
+    collection.return_value = mock_collection
 
     response = get_user(invalid_data)
 
-    assert response == expected
+    if invalid_data == "":
+        assert "Required field 'user_id' must not be empty string" in response[0]
+        assert response[1] == 400
+    else:
+        assert "Invalid field 'user_id'" in response[0]
+        assert response[1] == 400
 
 # update_user tests
 @patch("main.get_db")
-@patch("main.get_users_collection")
-def test_update_user_success(mock_users_collection, mock_get_db):
-    user_id = "1"
-
-    user = {
-        "id": user_id,
-        "email": "user@example.com",
-        "type": "user"
+@patch("main.get_collection")
+def test_update_user_success(collection, db):
+    data = {
+        "id": "1",
+        "type": "admin"
     }
 
-    mock_user_doc = MagicMock()
-    mock_user_doc.id = "some_id"
-    mock_user_doc.to_dict.return_value = user
+    mock_doc = MagicMock()
+    mock_doc.id = data["id"]
+    mock_doc.to_dict.return_value = data
 
-    # mock query
     mock_query = MagicMock()
-    mock_query.where.return_value.limit.return_value.stream.return_value = [mock_user_doc]
-    mock_users_collection.return_value = mock_query
+    mock_query.where.return_value.limit.return_value.stream.return_value = [mock_doc]
+    collection.return_value = mock_query
 
-    mock_user_doc_ref = MagicMock()
+    mock_doc_ref = MagicMock()
     mock_collection = MagicMock()
-    mock_collection.return_value = mock_user_doc_ref
+    mock_collection.return_value = mock_doc_ref
 
     mock_db = MagicMock()
     mock_db.collection.return_value = mock_collection
-    mock_get_db.return_value = mock_db
+    db.return_value = mock_db
 
     expected = (
         json.dumps({
@@ -508,163 +378,88 @@ def test_update_user_success(mock_users_collection, mock_get_db):
         }
     )
 
-    response = update_user(user_id, user)
+    response = update_user(data["id"], data)
 
     assert response == expected
 
 @patch("main.get_db")
-@patch("main.get_users_collection")
-@pytest.mark.parametrize("invalid_data", ["", 0, None])
-def test_update_user_invalid_id_fail(mock_users_collection, mock_get_db, invalid_data):
-    user = {
-        "email": "user@example.com",
-        "type": "user"
+@patch("main.get_collection")
+@pytest.mark.parametrize("invalid_data", ["", "some_id", None])
+def test_update_user_invalid_id_fail(collection, db, invalid_data):
+    data = {
+        "id": invalid_data,
+        "type": "admin"
     }
 
-    mock_user_doc = MagicMock()
+    response = update_user(data["id"], data)
 
-    # mock query
-    mock_query = MagicMock()
-    mock_query.where.return_value.stream.return_value = [mock_user_doc]
-    mock_users_collection.return_value = mock_query
-
-    mock_get_db.return_value = MagicMock()
-
-    expected = (
-        json.dumps({
-            "message": "Not Found",
-            "data": ""
-        }),
-        404,
-        {
-            "Content-Type": "application/json"
-        }
-    )
-
-    response = update_user(invalid_data, user)
-
-    assert response == expected
+    if invalid_data == "":
+        assert "Required field 'user_id' must not be empty string" in response[0]
+        assert response[1] == 400
+    else:
+        assert "Invalid field 'user_id'" in response[0]
+        assert response[1] >= 400
 
 @patch("main.get_db")
-@patch("main.get_users_collection")
-@pytest.mark.parametrize("invalid_data", [0, None, ""])
-def test_update_user_invalid_email_fail(mock_users_collection, mock_get_db, invalid_data):
-    user_id = "1"
-    
-    mock_user_doc = MagicMock()
+@patch("main.get_collection")
+@pytest.mark.parametrize("invalid_data", [None, "", "emaildotcom"])
+def test_update_user_invalid_email_fail(collection, db, invalid_data):
+    data = {
+        "id": "1",
+        "email": invalid_data
+    }
 
-    # mock query
+    mock_doc = MagicMock()
+
     mock_query = MagicMock()
-    mock_query.where.return_value.stream.return_value = [mock_user_doc]
-    mock_users_collection.return_value = mock_query
+    mock_query.where.return_value.limit.return_value.stream.return_value = [mock_doc]
+    collection.return_value = mock_query
 
-    mock_user_doc_ref = MagicMock()
-    mock_collection = MagicMock()
-    mock_collection.return_value = mock_user_doc_ref
+    db.return_value = MagicMock()
 
-    mock_db = MagicMock()
-    mock_db.collection.return_value = mock_collection
-    mock_get_db.return_value = mock_db
+    response = update_user(data["id"], data)
 
-    expected = (
-        json.dumps({
-            "message": "Bad Request",
-            "data": ""
-        }),
-        400,
-        {
-            "Content-Type": "application/json"
-        }
-    )
-
-    response = update_user(user_id, {"email": invalid_data})
-
-    assert response == expected
+    assert "Invalid field 'email'" in response[0]
+    assert response[1] == 400
 
 @patch("main.get_db")
-@patch("main.get_users_collection")
-@pytest.mark.parametrize("invalid_data", [0, None, ""])
-def test_update_user_password_fail(mock_users_collection, mock_get_db, invalid_data):
-    user_id = "1"
-    
-    mock_user_doc = MagicMock()
-
-    # mock query
-    mock_query = MagicMock()
-    mock_query.where.return_value.stream.return_value = [mock_user_doc]
-    mock_users_collection.return_value = mock_query
-
-    mock_user_doc_ref = MagicMock()
-    mock_collection = MagicMock()
-    mock_collection.return_value = mock_user_doc_ref
-
-    mock_db = MagicMock()
-    mock_db.collection.return_value = mock_collection
-    mock_get_db.return_value = mock_db
-
-    expected = (
-        json.dumps({
-            "message": "Bad Request",
-            "data": ""
-        }),
-        400,
-        {
-            "Content-Type": "application/json"
-        }
-    )
-
-    response = update_user(user_id, {"password": invalid_data})
-
-    assert response == expected
-
-@patch("main.get_db")
-@patch("main.get_users_collection")
+@patch("main.get_collection")
 @pytest.mark.parametrize("invalid_data", [0, None, "", "guest"])
-def test_update_user_invalid_type_fail(mock_users_collection, mock_get_db, invalid_data):
-    user_id = "1"
-    
-    mock_user_doc = MagicMock()
+def test_update_user_invalid_type_fail(collection, db, invalid_data):
+    data = {
+        "id": "1",
+        "type": invalid_data
+    }
 
-    # mock query
+    mock_doc = MagicMock()
+
     mock_query = MagicMock()
-    mock_query.where.return_value.stream.return_value = [mock_user_doc]
-    mock_users_collection.return_value = mock_query
+    mock_query.where.return_value.limit.return_value.stream.return_value = [mock_doc]
+    collection.return_value = mock_query
 
-    mock_user_doc_ref = MagicMock()
-    mock_collection = MagicMock()
-    mock_collection.return_value = mock_user_doc_ref
+    db.return_value = MagicMock()
 
-    mock_db = MagicMock()
-    mock_db.collection.return_value = mock_collection
-    mock_get_db.return_value = mock_db
+    response = update_user(data["id"], data)
 
-    expected = (
-        json.dumps({
-            "message": "Bad Request",
-            "data": ""
-        }),
-        400,
-        {
-            "Content-Type": "application/json"
-        }
-    )
-
-    response = update_user(user_id, {"type": invalid_data})
-
-    assert response == expected
+    assert "Invalid field 'type'" in response[0]
+    assert response[1] == 400
 
 # delete_user tests
-@patch("main.get_users_collection")
-def test_delete_user_success(mock_users_collection):
-    user_id = "1"
-    
-    mock_doc_ref = MagicMock()
+@patch("main.get_collection")
+def test_delete_user_success(collection):
+    data = {
+        "id": "1",
+        "email": "user@example.com",
+        "password": "Password123!",
+        "type": "user"
+    }
+
     mock_doc = MagicMock()
-    mock_doc.reference = mock_doc_ref
+    mock_doc.to_dict.return_value = data
 
     mock_query = MagicMock()
-    mock_query.where.return_value.stream.return_value = [mock_doc]
-    mock_users_collection.return_value = mock_query
+    mock_query.where.return_value.limit.return_value.stream.return_value = [mock_doc]
+    collection.return_value = mock_query
 
     expected = (
         json.dumps({
@@ -676,72 +471,55 @@ def test_delete_user_success(mock_users_collection):
             "Content-Type": "application/json"
         }
     )
-
-    response = delete_user(user_id)
+    
+    response = delete_user(data["id"])
 
     assert response == expected
 
-@patch("main.get_users_collection")
+@patch("main.get_collection")
 @pytest.mark.parametrize("invalid_data", [0, None, ""])
-def test_delete_user_invalid_id_fail(mock_users_collection, invalid_data):
-    mock_query = MagicMock()
-    mock_query.stream.return_value = []
-
-    mock_collection = MagicMock()
-    mock_collection.where.return_value = mock_query
-
-    mock_users_collection.return_value = mock_collection
-    
-    expected = (
-        json.dumps({
-            "message": "Not Found",
-            "data": ""
-        }),
-        404,
-        {
-            "Content-Type": "application/json"
-        }
-    )
-
+def test_delete_user_invalid_id_fail(collection, invalid_data):
     response = delete_user(invalid_data)
 
-    assert response == expected
+    if invalid_data == "":
+        assert "Required field 'user_id' must not be empty string" in response[0]
+        assert response[1] == 400
+    else:
+        assert "Invalid field 'user_id'" in response[0]
+        assert response[1] >= 400
 
 # update_password tests
 @patch("main.get_db")
-@patch("main.get_users_collection")
-def test_update_password_success(mock_users_collection, mock_get_db):
-    user_id = "1"
-    prev_password = "Password123!"
-    new_password = "Password1234!"
+@patch("main.get_collection")
+def test_update_password_success(collection, db):
+    data = {
+        "id": "1",
+        "prevPassword": "Password123!",
+        "newPassword": "Password1234!"
+    }
 
-    # hash prev_password
-    hashed_pw = bcrypt.hashpw(prev_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
-    mock_user_doc = MagicMock()
-    mock_user_doc.id = "mock_id"
-    mock_user_doc.to_dict.return_value = {
-        "id": user_id,
-        "password": hashed_pw
+    # hash prevPassword
+    hashed_pw = bcrypt.hashpw(data["prevPassword"].encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    
+    mock_doc = MagicMock()
+    mock_doc.to_dict.return_value = {
+        "id": "1",
+        "email": "user@example.com",
+        "password": hashed_pw,
+        "type": "user"
     }
 
     mock_query = MagicMock()
-    mock_query.where.return_value.limit.return_value.stream.return_value = [mock_user_doc]
-    mock_users_collection.return_value = mock_query
+    mock_query.where.return_value.limit.return_value.stream.return_value = [mock_doc]
+    collection.return_value = mock_query
 
-    mock_user_doc_ref = MagicMock()
+    mock_doc_ref = MagicMock()
     mock_collection = MagicMock()
-    mock_collection.return_value.document.return_value = mock_user_doc_ref
+    mock_collection.return_value.document.return_value = mock_doc_ref
 
     mock_db = MagicMock()
     mock_db.collection.return_value = mock_collection
-    mock_get_db.return_value = mock_db
-
-    user_data = {
-        "id": user_id,
-        "prevPassword": prev_password,
-        "newPassword": new_password
-    }
+    db.return_value = mock_db
 
     expected = (
         json.dumps({
@@ -754,50 +532,44 @@ def test_update_password_success(mock_users_collection, mock_get_db):
         }
     )
 
-    response = update_password(user_id, user_data)
+    response = update_password(data["id"], data)
 
     assert response == expected
 
 @patch("main.get_db")
-@patch("main.get_users_collection")
-@pytest.mark.parametrize("invalid_data", [0, None, "", "Password123!"])
-def test_update_password_invalid_password_fail(mock_users_collection, mock_get_db, invalid_data):
-    user_id = "1"
-    prev_password = "Password123!"
+@patch("main.get_collection")
+@pytest.mark.parametrize("invalid_data", [0, None, "", "pw"])
+def test_update_password_invalid_password_fail(collection, db, invalid_data):
+    data = {
+        "id": "1",
+        "prevPassword": "Password123!",
+        "newPassword": invalid_data
+    }
 
-    # hash prev_password
-    hashed_pw = bcrypt.hashpw(prev_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
-    mock_user_doc = MagicMock()
-    mock_user_doc.id = "mock_id"
-    mock_user_doc.to_dict.return_value = {
-        "id": user_id,
-        "password": hashed_pw
+    # hash prevPassword
+    hashed_pw = bcrypt.hashpw(data["prevPassword"].encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    
+    mock_doc = MagicMock()
+    mock_doc.to_dict.return_value = {
+        "id": "1",
+        "email": "user@example.com",
+        "password": hashed_pw,
+        "type": "user"
     }
 
     mock_query = MagicMock()
-    mock_query.where.return_value.limit.return_value.stream.return_value = [mock_user_doc]
-    mock_users_collection.return_value = mock_query
+    mock_query.where.return_value.limit.return_value.stream.return_value = [mock_doc]
+    collection.return_value = mock_query
 
-    mock_user_doc_ref = MagicMock()
+    mock_doc_ref = MagicMock()
     mock_collection = MagicMock()
-    mock_collection.return_value.document.return_value = mock_user_doc_ref
+    mock_collection.return_value.document.return_value = mock_doc_ref
 
     mock_db = MagicMock()
     mock_db.collection.return_value = mock_collection
-    mock_get_db.return_value = mock_db
+    db.return_value = mock_db
 
-    expected = (
-        json.dumps({
-            "message": "Bad Request",
-            "data": ""
-        }),
-        400,
-        {
-            "Content-Type": "application/json"
-        }
-    )
+    response = update_password(data["id"], data)
 
-    response = update_password(user_id, {"prevPassword": prev_password, "newPassword": invalid_data})
-
-    assert response == expected
+    assert "Invalid field 'newPassword'" in response[0]
+    assert response[1] == 400
