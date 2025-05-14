@@ -7,8 +7,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
-from common import logging
-from common import configure_logging, get_db, get_collection, http_response, process_params
+from common import get_db, get_collection, http_response, process_params
 from common import is_valid_email, is_valid_password
 ### DEVELOPMENT ###
 
@@ -19,11 +18,8 @@ user_types = [
 
 def request_handler(request):
     try:
-        configure_logging()
-
         # default to using an empty dict if data is None
         data = request.get_json(silent=True) or {}
-        logging.debug(f"Raw request data: {data}")
 
         # dynamically process parameters
         path, id_param, query_params = process_params(data)

@@ -14,21 +14,6 @@ STATUS = {
     500: "Internal Server Error"
 }
 
-ENABLE_LOGGING = True
-
-def configure_logging():
-    # configure logging for all services
-    # disable all logs if ENABLE_LOGGING is false
-    if not ENABLE_LOGGING:
-        logging.disable()
-    else:
-        # log format is "[LEVEL] [MM/DD/YY HH:MM:SS] - MESSAGE"
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format='[%(levelname)s] [%(asctime)s] - %(message)s',
-            datefmt='%m/%d/%y %H:%M:%S'
-    )
-
 """
 A utility function to call a Firestore database instance, useful for unit tests or batch operations.
 """
@@ -52,9 +37,6 @@ def http_response(status: int, data=None):
     try:
         if data is None:
             data = ""
-
-        if status > 201:
-            logging.error(f"{status}, {data}")
         
         response_data = {
             "message": STATUS.get(status, "Unknown status"),
@@ -70,7 +52,6 @@ def http_response(status: int, data=None):
 
         return response
     except Exception as e:
-        logging.error(f"500, {e}")
         return (
             json.dumps({"message": STATUS[500], "data": e}),
             500,
@@ -82,7 +63,6 @@ def process_params(request_data) -> tuple:
     path = request_data.path.strip("/").split("/")
     # store query parameters
     query_params = request_data.args
-    logging.debug(f"Query parameters: {query_params}")
 
     # dynamically parse path parameters
     id_param = None
@@ -93,7 +73,6 @@ def process_params(request_data) -> tuple:
             if segment == "id" and i < len(path):
                 id_param = path[i]
                 break
-    logging.debug(f"ID path parameter: {id_param}")
     
     return (path, id_param, query_params)
 
