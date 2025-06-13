@@ -8,6 +8,8 @@ from common import logging
 from common import configure_logging, get_db, get_collection, http_response, process_params
 from common import is_valid_email, is_valid_password
 ### DEVELOPMENT ###
+import requests
+from math import radians, sin, cos, sqrt, atan2
 
 STATUS = {
     200: "OK",
@@ -19,6 +21,40 @@ STATUS = {
     409: "Conflict",
     500: "Internal Server Error"
 }
+
+def geocode_location(query: str):
+    # query Nominatim
+    response = requests.get("https://nominatim.openstreetmap.org/search", params={
+        "q": query,
+        "format": "json",
+        "limit": 1
+    }, 
+    headers={"User-Agent": "Flow Transit"})
+
+    data = response.json()
+    
+    if data:
+        lat = float(data[0]["lat"])
+        lon = float(data[0]["long"])
+        return lat, lon
+    else:
+        raise ValueError(f"Location '{query}' not found.")
+
+def haversine(lat1, long1, lat2, long2):
+    R = 3958.8
+    dlat = radians(lat2 - lat1)
+    dlong = radians(long2 - long1)
+    a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlong/2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1-a))
+    return R * c
+
+def get_routes_near_location(center_lat, center_long, radius, routes):
+    results = []
+    for route in routes:
+        dist = haversine(center_lat, center_long, route["lat"], route["long"])
+        if dist <= radius:
+            results.append(route)
+    return results
 
 def get_db():
     return firestore.Client()

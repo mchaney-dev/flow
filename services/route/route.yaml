@@ -91,7 +91,7 @@ paths:
                 stops:
                   type: array
                   items:
-                    type: string
+                    $ref: '#/components/schemas/Stop'
                 active:
                   type: boolean
       responses:
@@ -156,10 +156,31 @@ components:
         stops:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/Stop'
         createdBy:
           type: string
           description: ID of the user who created the route
         active:
           type: boolean
           default: true
+
+    Stop:
+      description: A stop on a Route
+      type: object
+      required:
+        - id
+        - name
+        - lat
+        - long
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        lat:
+          type: number
+          format: float
+        long:
+          type: number
+          format: float
+        
